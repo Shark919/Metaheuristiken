@@ -620,6 +620,7 @@ to create-new-generation
         let tmp parent1
         let middleParent1 []
         let middleParent2 []
+
         ;; Hier wird der mittlere Teil ausgetauscht
         let i random1
         while [i < ((length parent1) - random2)] [
@@ -629,7 +630,7 @@ to create-new-generation
           set middleParent2 lput (item i tmp) middleParent2
           set i i + 1
         ]
-print "firstwhile"
+
         ;; Überprüfen, ob in dem ersten Teil eine Zahl doppelt vorkommt
         set i 0
         while [ i < random1 ] [
@@ -639,11 +640,11 @@ print "firstwhile"
           ]
           while [ member? (item i parent2) middleParent2] [
             let pos position item i parent2 middleParent2
-            set parent2 (replace-item i parent2 (item pos parent1))
+            set parent2 (replace-item i parent2 (item pos middleParent1))
           ]
           set i i + 1
           ]
-print "secondwhile"
+
         ;; Überprüfen, ob in dem zweiten Teil eine Zahl doppelt vorkommt
         set i ((length parent1) - random2)
         while [i < length parent1] [
@@ -653,7 +654,7 @@ print "secondwhile"
           ]
         while [ member? (item i parent2) middleParent2] [
             let pos position item i parent2 middleParent2
-            set parent2 (replace-item i parent2 (item pos parent1))
+            set parent2 (replace-item i parent2 (item pos middleParent1))
           ]
         set i i + 1
         ]
@@ -1085,8 +1086,8 @@ GRAPHICS-WINDOW
 190
 0
 100
-1
-1
+0
+0
 1
 ticks
 30.0
@@ -1134,7 +1135,7 @@ population-size
 population-size
 3
 1000
-267.0
+150.0
 1
 1
 NIL
@@ -1149,7 +1150,7 @@ mutation-rate
 mutation-rate
 0
 30
-14.9
+22.5
 .1
 1
 NIL
@@ -1184,8 +1185,8 @@ SLIDER
 number-of-cycles
 number-of-cycles
 1
-1000
-211.0
+10000
+450.0
 2
 1
 NIL
@@ -1271,7 +1272,7 @@ crossover-rate
 crossover-rate
 0
 100
-38.0
+65.0
 1
 1
 NIL
@@ -1284,7 +1285,7 @@ SWITCH
 107
 swap-mutation?
 swap-mutation?
-1
+0
 1
 -1000
 
@@ -1295,7 +1296,7 @@ SWITCH
 75
 preserve-common-links?
 preserve-common-links?
-1
+0
 1
 -1000
 
@@ -1363,7 +1364,7 @@ CHOOSER
 selection?
 selection?
 "match" "roulette"
-1
+0
 
 SWITCH
 205
@@ -1384,7 +1385,7 @@ CHOOSER
 recombination?
 recombination?
 "mappedCrossover" "edgeRecombination"
-0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
