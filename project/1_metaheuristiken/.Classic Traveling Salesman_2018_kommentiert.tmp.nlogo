@@ -1363,7 +1363,7 @@ CHOOSER
 selection?
 selection?
 "match" "roulette"
-1
+0
 
 SWITCH
 205
