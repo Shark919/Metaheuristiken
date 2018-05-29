@@ -1163,7 +1163,7 @@ population-size
 population-size
 3
 1000
-146.0
+150.0
 1
 1
 NIL
@@ -1248,7 +1248,7 @@ tournament-size
 tournament-size
 2
 10
-2.0
+5.0
 1
 1
 NIL
@@ -1309,7 +1309,7 @@ SWITCH
 75
 preserve-common-links?
 preserve-common-links?
-0
+1
 1
 -1000
 
@@ -1386,7 +1386,7 @@ SWITCH
 139
 elitism?
 elitism?
-1
+0
 1
 -1000
 
@@ -1398,7 +1398,7 @@ CHOOSER
 recombination?
 recombination?
 "mappedCrossover" "edgeRecombination"
-1
+0
 
 SLIDER
 9
@@ -1409,7 +1409,7 @@ number-of-cycles
 number-of-cycles
 1
 1000
-797.0
+450.0
 2
 1
 NIL
