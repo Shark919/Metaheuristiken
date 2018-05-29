@@ -192,7 +192,7 @@ to go
 
   ;;Vor dem Start des Lösungsverfahrens (d.h. in Iteration 0):
   if ticks = 0
-   [set global-min-fitness 0         ;;als initialer Wert wird die Fitness der besten Lösung (hier: gleich der Distanz) sehr hoch gesetzt
+   [set global-min-fitness 1000         ;;als initialer Wert wird die Fitness der besten Lösung (hier: gleich der Distanz) sehr hoch gesetzt
   set start-time date-and-time]         ;;die Startzeit wird festgehalten
 
 
@@ -210,7 +210,7 @@ to go
   ;;es wird geprüft, ob der Lösungswert der besten Lösung aus der neuen Generation die bisher beste bekannte Lösung übertrifft
   ;;ist dies der Fall, wird die beste bekannte Lösung mit der aktuellen Lösung überschrieben
   if ticks > 0
-  [if [fitness] of winner > global-min-fitness [set global-min-fitness [fitness] of winner
+  [if [fitness] of winner < global-min-fitness [set global-min-fitness [fitness] of winner
                                                 set global-min-string [string] of winner]]
 
   ;;um zwischendurch die beste gefundene Lösung zu zeichnen:
@@ -294,12 +294,12 @@ end
 ;;zu beachten ist allerdings auch, dass dann z.B. "winner" als "max-one-of" auszuwählen ist
 ;;<<<<<<<<<
 to calculate-fitness
-    set fitness (100 / pdistance)                   ;;The real fitness function is the distance procedure above, here we just tell the program that pdistance = fitness.
+  set fitness pdistance
 end
 
 to calculate-winner-looser-fintess
-  set winner max-one-of turtles [fitness] ;;in this case the winner is the turtle traveling the least distance
-  set looser min-one-of turtles [fitness] ;;  hier wird auch das schlechteste Individuum gespeichert (im weiteren Verlauf bisher aber nicht wirklich verwendet)
+  set winner min-one-of turtles [fitness] ;;in this case the winner is the turtle traveling the least distance
+  set looser max-one-of turtles [fitness] ;;  hier wird auch das schlechteste Individuum gespeichert (im weiteren Verlauf bisher aber nicht wirklich verwendet)
 end
 
 ;;>>>>>>>>
@@ -319,9 +319,10 @@ to create-new-generation
 
  ;;da Start-und Endort der Rundreise durch die Stadt 0 fest vorgegeben sind, werden diese vor den Crossover-Operationen aus den einzelnen Lösungen entfernt
  ;;(und später wieder hinzugefügt)
+  
   ask turtles [set string remove-item 21 string  ;;
                set string remove-item 0 string]
-
+  
   ;;Da der Edge Rekombination Crossover eingesetzt wird, bei dem aus zwei Elternteilen jeweils ein Kind erzeugt wird,
   ;;wird im Folgenden im Rahmen der vorhandenen Implementierung einfach für jede aktuelle Lösung eine neue erstellt oder die alte Lösung beibehalten
   ;;>>>>>>>>
@@ -334,14 +335,22 @@ to create-new-generation
   if selection? = "roulette" [
     let sumFitness sum [fitness] of turtles
     let previous 0
-    ask turtles [
-      set rouletteWheel previous + ( fitness / sumFitness )
-      set previous rouletteWheel
-    ]
+    
+    foreach sort-on [(fitness)] turtles
+    [ the-turtle -> ask the-turtle [set rouletteWheel previous + 1 - (fitness / sumFitness)
+                                    set previous rouletteWheel] ]
+    
+    let maxRouletteWheel max [rouletteWheel]of turtles
+    foreach sort-on [(fitness)] turtles
+    [ the-turtle -> ask the-turtle [set rouletteWheel maxRouletteWheel - rouletteWheel] ]
   ]
 
   ask turtles [
-
+  ifelse elitism? and self = winner
+    [
+      ;; do nothing as we do not want to replace the best solution
+    ]
+    [
   if random-float 100.0 < crossover-rate [
   ;; falls eine zufällig gezogene Zahl bis 100 unterhalb der voreingestellten Crossover-Rate liegt, dann soll die bestehende Lösung durch eine neue ersetzt werden
 
@@ -369,20 +378,17 @@ to create-new-generation
   if selection? = "match" [
         ;;Turnierbasierte Selektion zur Auswahl der beiden Elternpaare:
         ;; für die beiden  Elternteile weren jeweils so viele Lösungen zufällig ausgewählt, wie durch die "tournament-size" vorgegeben wird
-        set parent1-p max-one-of (n-of tournament-size old-generation) [fitness]
-        set parent2-p max-one-of (n-of tournament-size old-generation) [fitness]
+        set parent1-p min-one-of (n-of tournament-size old-generation) [fitness]
+        set parent2-p min-one-of (n-of tournament-size old-generation) [fitness]
       ]
+      
   if selection? = "roulette" [
         ;;Fitnessproportionale Selection zur Auswahl der beiden Elternpaare:
         ;;Hier Verwendung der Roulette-Wheel-Selection
-        let parents rnd:weighted-n-of 2 turtles [ rouletteWheel ]
-        let i 0
-        ask parents [
-          ifelse i = 0 [set parent1-p self]
-                       [set parent2-p self]
-          set i 1
-        ]
+        set parent1-p rnd:weighted-one-of turtles [ rouletteWheel ]
+        set parent2-p rnd:weighted-one-of turtles [ rouletteWheel ]
    ]
+      
   if recombination? = "edgeRecombination" [
         ;;>>>>>>Beginn des Edge Recombination Crossover
         ;;>>>>>>wenn Crossover-Operator geändert wird, wäre hier eine Anpassung nötig
@@ -664,7 +670,7 @@ to create-new-generation
  calculate-distance
  calculate-fitness
 
-  ]]
+    ]]]
   calculate-winner-looser-fintess
 
   ;;Aufruf der Prozedur zur Mutation der Individuen
@@ -790,7 +796,9 @@ to mutate
 
 ask turtles [
     ifelse elitism? and self = winner
-    []
+    [
+      ;do nothing, as we do not want to mutate the winner
+    ]
     [
       ifelse swap-mutation?
 
@@ -830,8 +838,8 @@ end
 to do-plotting
  let fitness-dump [fitness] of turtles
  let av mean fitness-dump
- let best max fitness-dump      ;;>>>>bei Anpassung der Fitnessberechnung müsste hier min/max geprüft werden<<<<
- let worst min fitness-dump     ;;>>>>bei Anpassung der Fitnessberechnung müsste hier min/max geprüft werden<<<<
+ let best min fitness-dump      ;;>>>>bei Anpassung der Fitnessberechnung müsste hier min/max geprüft werden<<<<
+ let worst max fitness-dump     ;;>>>>bei Anpassung der Fitnessberechnung müsste hier min/max geprüft werden<<<<
 
   ;;Ausgabe im Fitness-Plot
   set-current-plot "fitness-plot"
@@ -1064,831 +1072,3 @@ end
 
 
 ; Last Updated: Jun 18, 2011  bzw. 8.5.2018 für Kurs Metaheuristiken und Simulation
-@#$#@#$#@
-GRAPHICS-WINDOW
-514
-63
-1240
-451
--1
--1
-3.76
-1
-10
-1
-1
-1
-0
-0
-0
-1
-0
-190
-0
-100
-0
-0
-1
-ticks
-30.0
-
-BUTTON
-711
-10
-777
-43
-setup
-setup
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-776
-10
-842
-43
-NIL
-go
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-SLIDER
-9
-10
-205
-43
-population-size
-population-size
-3
-1000
-150.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-9
-74
-205
-107
-mutation-rate
-mutation-rate
-0
-30
-22.5
-.1
-1
-NIL
-HORIZONTAL
-
-PLOT
-16
-259
-492
-514
-fitness-plot
-time
-fitness
-0.0
-10.0
-0.0
-1.0
-true
-true
-"" ""
-PENS
-"." 1.0 0 -16777216 true "" ""
-"av" 1.0 0 -13345367 true "" ""
-"best" 1.0 0 -10899396 true "" ""
-"worst" 1.0 0 -5825686 true "" ""
-
-SLIDER
-9
-107
-205
-140
-number-of-cycles
-number-of-cycles
-1
-10000
-450.0
-2
-1
-NIL
-HORIZONTAL
-
-BUTTON
-841
-10
-907
-43
-step
-go
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-512
-10
-708
-43
-Load Map
-tsp2018Map
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-SLIDER
-9
-42
-205
-75
-tournament-size
-tournament-size
-2
-10
-2.0
-1
-1
-NIL
-HORIZONTAL
-
-MONITOR
-16
-214
-158
-259
-Best Global Fitness
-global-min-fitness
-15
-1
-11
-
-MONITOR
-159
-214
-492
-259
-Best Global Solution
-global-min-string
-17
-1
-11
-
-SLIDER
-204
-10
-403
-43
-crossover-rate
-crossover-rate
-0
-100
-65.0
-1
-1
-NIL
-HORIZONTAL
-
-SWITCH
-204
-74
-403
-107
-swap-mutation?
-swap-mutation?
-0
-1
--1000
-
-SWITCH
-204
-42
-403
-75
-preserve-common-links?
-preserve-common-links?
-0
-1
--1000
-
-PLOT
-15
-524
-471
-840
-best-fitness-plot
-time
-fitness
-0.0
-10.0
-0.0
-1.0
-true
-true
-"" ""
-PENS
-"." 1.0 0 -16777216 true "" ""
-"best" 1.0 0 -10899396 true "" ""
-
-SLIDER
-963
-18
-1227
-51
-show-best-solution-at-each-x-iteration
-show-best-solution-at-each-x-iteration
-10
-100
-30.0
-10
-1
-NIL
-HORIZONTAL
-
-MONITOR
-1070
-458
-1239
-503
-NIL
-start-time
-17
-1
-11
-
-MONITOR
-1070
-505
-1240
-550
-NIL
-end-time
-17
-1
-11
-
-CHOOSER
-10
-139
-205
-184
-selection?
-selection?
-"match" "roulette"
-0
-
-SWITCH
-205
-106
-403
-139
-elitism?
-elitism?
-1
-1
--1000
-
-CHOOSER
-205
-138
-403
-183
-recombination?
-recombination?
-"mappedCrossover" "edgeRecombination"
-1
-
-@#$#@#$#@
-## WHAT IS IT?
-
-Put shortly, this is a model of the traveling salesman problem using a genetic algorithm. Below is an in deph description of both components. 
-
-##
-                          THE TRAVELING SALESMAN PROBLEM
-
-
-	The Traveling Salesman Problem (TSP) is a famous optimization problem, studied extensively in mathematics and computer science (Yuping). A salesman must visit a network of cities once and return to the starting city. The problem is to find the shortest tour among these cities to minimize the total travel distance and cost of the tour (Kashyap). 
-
-	One way of solving the TSP is to list all of the possible solutions and evaluate them one-by-one. This works well for smaller amounts of cities, but will become more time consuming as more cities are added, for the number of solutions to the TSP is represented by the formula: (N-1!). For this reason, emphasis has shifted from finding the best solution to finding good solutions in reasonable amounts of time. The genetic algorithm is one of the best algorithms for finding good solutions quickly (Ahmed).   
-The TSP has attracted the attention of many people and will remain as an active research area. The main reason for this is large numbers of real-world problems can be modeled by the TSP, for example the automated drilling of printed circuit boards is one of them. By finding an efficient way to solve the TSP, other similar problems can be solved as well (Ahmed).
-
-##
-                              THE GENETIC ALGORITHM
-
-
-	Essentially, genetic algorithms are solution-searching techniques based on the survival of the fittest, crossover, and mutation processes of evolutionary biology. They have been used for solving a number of different complicated problems, including the TSP. The original theory, based on genetic structure and the behavior of chromosomes in nature, was developed by John Holland and his students in the early 1970s. A population of chromosomes, represented by encoded solutions, is changed by applying three main genetic operators to the algorithm in each generation: selection, crossover, and mutation. The fitness of the chromosomes (how well individual solutions satisfy set criteria) is measured via the fitness function. The algorithm proceeds to cycle through this process until an adequate solution is found. Each time chromosomes cycle through the algorithm, a new generation is created [2].
-
-	Similar to the way organisms adapt and improve, solutions produced through the algorithm should improve with every successive generation. Through this process, genetic algorithms are able to produce accurate solutions to complicated problems in reasonable amounts of time (Ahmed).
-
-The main parts of the genetic algorithm include:  
--Initial population and encoding  
--The fitness function  
--Selection  
--Crossover  
--Mutation
-
-Each are explaned below
-
-## HOW IT WORKS: STEPS BELOW:
-
-##
-                          INITIAL POPULATION
-
-
-	The initial population of chromosomes, necessary to start the algorithm, is randomly generated; each chromosome will represent a solution �a tour. To encode the tours, an appropriate encoding method needs to be selected [5]. Path representation is used to encode the tours; characters will represent cities. The number of characters in the path is equal to the number of cities in the tour and specific characters cannot repeat; for the salesman cannot visit one city more than once (Ahmed). The length of the tour, or the distance traveled by the salesman, is equivalent to the fitness of the tour and depends on the ordering of cities [2]. For example, the following figure represents a path the salesman could take on the tour:
-
-## FITNESS FUNCTION
-
-The fitness function determines how �good� a chromosome is. In the case of the TSP, the fitness of a particular tour is equal to the distance traveled if the tour was taken. The shortest tours have the best fitness, making the TSP a minimization problem (Bryant). The model may be extended to include factors like air travel cost and the sales potential of each city. Each factor is weighted a certain amount contributes to the total fitness of the solution: similar to weighted grades. To do this the problem needs to be converted into a maximization problem.
-
-Genetic algorithms are usually used in maximization problems. The algorithm will still function properly as a minimization problem, but for scientific accuracy it needs to be converted into a maximization problem. As described above, if other factors needed to be added in, it is easier to convert the distance traveled to a maximization problem rather than covering all of the other factors to minimization problems. The following equation will convert the problem:
-
-1/ Total Distance Traveled
-
-The total distance traveled can be calculated using the distance formula for each point in the tour (Bhattacharyya).  Although this is the proper way to express the problem, it is easier to see how the algorithm works if left as a minimization problem (improvement is easily seen). 
-
-## SELECTION
-
-The selection process is what determines the chromosomes will be selected for reproduction and the ones that will not. Generally, selection puts more emphasis on good solutions and eliminates bad solutions, while keeping a constant population size. Multiple copies of good solutions are made; each with varying characteristics, an most bad solutions are discarded. Some of the bad solutions are kept for the diversity among the solutions; adding a bad solution to the population helps to prevent convergence on one particular solution. (Kashyap).
-
-Selection may be applied two main ways: roulette wheel selection and tournament selection. Both methods depend upon the fitness level of specific chromosomes in the population (Cunkas).
-
-During roulette wheel selection, each chromosome is assigned a slot on an imaginary roulette wheel. The slot is proportionate to the fitness of the chromosomes; chromosomes with better fitness levels receive larger slots on the roulette wheel and therefore a larger probability of being selected. The roulette wheel is then spun a number of times and each solution the wheel lands on is put in a group. A parent chromosome is selected at random from the group to enter the crossover phase of the algorithm. This process is repeated again to produce another parent chromosome (Kashyap). Figure two shows a simple four-chromosome example of roulette wheel selection based on fitness level (higher percentages indicate higher fitness levels).
-
-In tournament selection, selection is based on a tournament among a few chromosomes. Usually about two or three chromosomes are selected at random from the population, then the best of these chromosomes becomes a parent chromosome. This process is repeated again to produce another parent chromosome. The parent chromosomes then move on to the crossover phase of the algorithm (Cunkas). Figure three shows tournament selection between two sets of two chromosomes.
-   
-Essentially, both of these processes mimic Darwinian survival of the fittest in nature. In the natural world, selection is determined by an organism�s ability to survive. Organisms that are not fit enough to survive die out from climate changes, predators, and other obstacles, while others who are fit enough continue to reproduce, evolve, and become fitter. This is the main principle that drives the genetic algorithm (Ahmed).
-
-This model uses tournament selection.
-
-Essentially, both of these processes mimic Darwinian survival of the fittest in nature. In the natural world, selection is determined by an organism�s ability to survive. Organisms that are not fit enough to survive die out from climate changes, predators, and other obstacles, while others who are fit enough continue to reproduce, evolve, and become fitter. This is the main principle that drives the genetic algorithm (Ahmed).
-
-## CROSSOVER
-
-Crossover is the process by which two chromosomes combine tours to produce new offspring with characteristics from both tours. Two chromosomes are picked at random from a group of chromosomes and are combined to produce new ones (Kashyap). This process searches the solution space by maintaining common connections and by recombining uncommon genes (Cunkas).
-
-The basic crossover method proceeds as follows. A common crossover site is selected randomly among the selected chromosomes and the information after the site is swapped. Figure four shows this crossover; called a single point crossover.
-
-Unfortunately, this method of crossover is not supported by the TSP without extensive modification (Ahmed). 
-
-The single point method of crossover produces invalid offspring for the TSP; some cities in the tour will repeat. For this reason, the edge recombination crossover (ERX) has been developed. The ERX is not only compatible with the TSP; it emphasizes adjacency information instead of order and sequence. In other words, the ERX focuses on creating new chromosomes based on links into and out of cities in both parent�s tours. This creates better chromosomes by preserving similar genetic material between parent chromosomes. Additionally, the ERX is more likely to retain common links between the parents than other traditional methods (Kashap).
-
-## MUTATION
-
-The basic function of the mutation operator is to introduce diversity into the population of chromosomes (Potvin). Chromosomes are deliberately changed in random locations to increase diversity by exploring the entire solution space (Cunkas). Tours are randomly chosen to mutate based on some probability, then within the tours, random points are chosen for mutation (Bryant). This can be done a variety of ways: but for this algorithm two points within the picked tour are chosen, then changed randomly to other numbers. The tour is then checked to make sure it is still valid.   
-Swap mutation is another method of mutation. Just as the name suggests, a number of points in a chromosome are selected then swapped out. There is no need to check for validation of tours when using this method (Cunkas).  
-The process of mutation introduces random disturbances into the search process not possible through crossover. This allows for a wider search and a diverse population of solutions (Potvin).
-
-## HOW TO USE IT
-
-The population-size slider controls how large the initial population of solutions will be.
-
-The tournament-size slider determines how large the tournament size will be in selection.
-
-The mutation-rate slider controls how often each chromosome is mutated. The number shown is a percentage.
-
-The number-of-cycles slider sets the number of cycles the algorithm will run before stopping.
-
-The crossover-rate slider controls the percentages of solutions that are created from crossover to rather than cloning.
-
-The preserve-common-links switch determines if the algorithm gives preference to common links among parents or not; for example, if both parents contain a link from city one to two, this link is more likely to be preserved with this option on.
-
-The swap-mutation switch determines if the mutation method used. On: two point swap mutation. Off: two point random mutation
-
-The best global fitness and best global solution monitors show the best solution the algorithm has found. If the algorithm �jumps� back up to a worse fitness, these monitors will keep the best fitness overall.
-
-The fitness plot displays a graph of the worst, average, and best fitness for each cycle of the algorithm.
-
-The map display shows the current map loaded into the algorithm, and when the algorithm has finished, draws out the best tour between the cities.
-
-## THINGS TO NOTICE
-
--Notice how the fitness graph generally goes shows a lower fitness over time; this means the algorithm is 'learning' and producing better solutions. 
-
--The algorithm will not find the best solution every time, but it usually finds a good one.
-
--When the model finishes running, it draws the shortest path it found on the map.
-
--A small population size usually generates better results than larger ones.
-
--The best fitnesses are around 280-290.
-
-## THINGS TO TRY
-
--Try running the model more than once, you'll get different results most times.
-
--Move the crossover slider to 0, and observe the fitness graph.
-
--Move the mutation slider to 0, and observe the fitness graph.
-
--Turn the preserve-common-links? and swap-mutation? sliders off or on and run the model.
-
--Leave the model running overnight and observe the fitness when its finished.
-
-## EXTENDING THE MODEL
-
--Use latitude and longitude for city locations.
-
--Change the crossover method.
-
--Change the selection method.
-
--Try a differant map.
-
--Include a tour cost equation (to calculate how much the tour would cost if taken) in the fitness evaluation process.
-
-## RELATED MODELS
-
--Simple Genetic Algorithm
-
-## CREDITS AND REFERENCES
-
--Ahmed, Zakir H. Genetic Algorithms for the Traveling Salesman Problem using Sequential 	 Constructive Operator. Al-Imam.
-
--Al-Dulaimi, Buthainah Fahran and Hamza A. Ali. Enhanced Traveling Salesman Problem  Solving by Genetic Algorithm Technique. World Academy of Science, Engineering and Technology. 2008. Web. November 28, 2010. <citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.91>.
-
--Bhattacharyya, Malay, and Anup Kumar Bandyopadhyay. "COMPARATIVE STUDY OF SOME SOLUTION METHODS FOR TRAVELING SALESMAN PROBLEM USING GENETIC ALGORITHMS." Cybernetics & Systems 40.1 (2009): 1-24. Academic Search Premier. EBSCO. Web. 7 Dec. 2010.
-
--Bryant, Kylie. "Genetic Algorithms and the Traveling Salesman Problem." 2000. EBSCO. 6 12 2010.
-
--�unkas, Mehmet, and M. Yasin �zsa?lam. "A COMPARATIVE STUDY ON PARTICLE SWARM OPTIMIZATION AND GENETIC ALGORITHMS FOR TRAVELING SALESMAN PROBLEMS." Cybernetics & Systems 40.6 (2009): 490-507. Academic Search Premier. EBSCO. Web. 7 Dec. 2010.
-
--Jayalakshmi, G. Andal, S. Sathiamoorthy, and R. Rajaram. "A Hybrid Genetic Algorithm � A New Approach to Solve Traveling Salesman Problem." International Journal of Computational Engineering Science 2.2 (2001): 339. Academic Search Premier. EBSCO. Web. 7 Dec. 2010.
-
--Kashyap, Chhavi. "Genetic Algorithms." PowerPoint Presentation.
-
--Potvin, Jean-Yves. Genetic Algorithms for the Traveling Salesman Problem. Universite de Montreal. Allals of Operations Research. Web. November 30, 2010. < http://www.springerlink.com/content/j13214073h2808k0/>.
-
--Yuping, Wang, et al. "A new encoding based genetic algorithm for the traveling salesman problem." Engineering Optimization 38.1 (2006): 1-13. Academic Search Premier. EBSCO. Web. 7 Dec. 2010.
-
-Also, take a look at wikipeadia's description of the genetic algorithm; its not half bad.
-@#$#@#$#@
-default
-true
-0
-Polygon -7500403 true true 150 5 40 250 150 205 260 250
-
-airplane
-true
-0
-Polygon -7500403 true true 150 0 135 15 120 60 120 105 15 165 15 195 120 180 135 240 105 270 120 285 150 270 180 285 210 270 165 240 180 180 285 195 285 165 180 105 180 60 165 15
-
-arrow
-true
-0
-Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
-
-box
-false
-0
-Polygon -7500403 true true 150 285 285 225 285 75 150 135
-Polygon -7500403 true true 150 135 15 75 150 15 285 75
-Polygon -7500403 true true 15 75 15 225 150 285 150 135
-Line -16777216 false 150 285 150 135
-Line -16777216 false 150 135 15 75
-Line -16777216 false 150 135 285 75
-
-bug
-true
-0
-Circle -7500403 true true 96 182 108
-Circle -7500403 true true 110 127 80
-Circle -7500403 true true 110 75 80
-Line -7500403 true 150 100 80 30
-Line -7500403 true 150 100 220 30
-
-butterfly
-true
-0
-Polygon -7500403 true true 150 165 209 199 225 225 225 255 195 270 165 255 150 240
-Polygon -7500403 true true 150 165 89 198 75 225 75 255 105 270 135 255 150 240
-Polygon -7500403 true true 139 148 100 105 55 90 25 90 10 105 10 135 25 180 40 195 85 194 139 163
-Polygon -7500403 true true 162 150 200 105 245 90 275 90 290 105 290 135 275 180 260 195 215 195 162 165
-Polygon -16777216 true false 150 255 135 225 120 150 135 120 150 105 165 120 180 150 165 225
-Circle -16777216 true false 135 90 30
-Line -16777216 false 150 105 195 60
-Line -16777216 false 150 105 105 60
-
-car
-false
-0
-Polygon -7500403 true true 300 180 279 164 261 144 240 135 226 132 213 106 203 84 185 63 159 50 135 50 75 60 0 150 0 165 0 225 300 225 300 180
-Circle -16777216 true false 180 180 90
-Circle -16777216 true false 30 180 90
-Polygon -16777216 true false 162 80 132 78 134 135 209 135 194 105 189 96 180 89
-Circle -7500403 true true 47 195 58
-Circle -7500403 true true 195 195 58
-
-circle
-false
-0
-Circle -7500403 true true 0 0 300
-
-circle 2
-false
-0
-Circle -7500403 true true 0 0 300
-Circle -16777216 true false 30 30 240
-
-cow
-false
-0
-Polygon -7500403 true true 200 193 197 249 179 249 177 196 166 187 140 189 93 191 78 179 72 211 49 209 48 181 37 149 25 120 25 89 45 72 103 84 179 75 198 76 252 64 272 81 293 103 285 121 255 121 242 118 224 167
-Polygon -7500403 true true 73 210 86 251 62 249 48 208
-Polygon -7500403 true true 25 114 16 195 9 204 23 213 25 200 39 123
-
-cylinder
-false
-0
-Circle -7500403 true true 0 0 300
-
-dot
-false
-0
-Circle -7500403 true true 90 90 120
-
-face happy
-false
-0
-Circle -7500403 true true 8 8 285
-Circle -16777216 true false 60 75 60
-Circle -16777216 true false 180 75 60
-Polygon -16777216 true false 150 255 90 239 62 213 47 191 67 179 90 203 109 218 150 225 192 218 210 203 227 181 251 194 236 217 212 240
-
-face neutral
-false
-0
-Circle -7500403 true true 8 7 285
-Circle -16777216 true false 60 75 60
-Circle -16777216 true false 180 75 60
-Rectangle -16777216 true false 60 195 240 225
-
-face sad
-false
-0
-Circle -7500403 true true 8 8 285
-Circle -16777216 true false 60 75 60
-Circle -16777216 true false 180 75 60
-Polygon -16777216 true false 150 168 90 184 62 210 47 232 67 244 90 220 109 205 150 198 192 205 210 220 227 242 251 229 236 206 212 183
-
-fish
-false
-0
-Polygon -1 true false 44 131 21 87 15 86 0 120 15 150 0 180 13 214 20 212 45 166
-Polygon -1 true false 135 195 119 235 95 218 76 210 46 204 60 165
-Polygon -1 true false 75 45 83 77 71 103 86 114 166 78 135 60
-Polygon -7500403 true true 30 136 151 77 226 81 280 119 292 146 292 160 287 170 270 195 195 210 151 212 30 166
-Circle -16777216 true false 215 106 30
-
-flag
-false
-0
-Rectangle -7500403 true true 60 15 75 300
-Polygon -7500403 true true 90 150 270 90 90 30
-Line -7500403 true 75 135 90 135
-Line -7500403 true 75 45 90 45
-
-flower
-false
-0
-Polygon -10899396 true false 135 120 165 165 180 210 180 240 150 300 165 300 195 240 195 195 165 135
-Circle -7500403 true true 85 132 38
-Circle -7500403 true true 130 147 38
-Circle -7500403 true true 192 85 38
-Circle -7500403 true true 85 40 38
-Circle -7500403 true true 177 40 38
-Circle -7500403 true true 177 132 38
-Circle -7500403 true true 70 85 38
-Circle -7500403 true true 130 25 38
-Circle -7500403 true true 96 51 108
-Circle -16777216 true false 113 68 74
-Polygon -10899396 true false 189 233 219 188 249 173 279 188 234 218
-Polygon -10899396 true false 180 255 150 210 105 210 75 240 135 240
-
-house
-false
-0
-Rectangle -7500403 true true 45 120 255 285
-Rectangle -16777216 true false 120 210 180 285
-Polygon -7500403 true true 15 120 150 15 285 120
-Line -16777216 false 30 120 270 120
-
-leaf
-false
-0
-Polygon -7500403 true true 150 210 135 195 120 210 60 210 30 195 60 180 60 165 15 135 30 120 15 105 40 104 45 90 60 90 90 105 105 120 120 120 105 60 120 60 135 30 150 15 165 30 180 60 195 60 180 120 195 120 210 105 240 90 255 90 263 104 285 105 270 120 285 135 240 165 240 180 270 195 240 210 180 210 165 195
-Polygon -7500403 true true 135 195 135 240 120 255 105 255 105 285 135 285 165 240 165 195
-
-line
-true
-0
-Line -7500403 true 150 0 150 300
-
-line half
-true
-0
-Line -7500403 true 150 0 150 150
-
-pentagon
-false
-0
-Polygon -7500403 true true 150 15 15 120 60 285 240 285 285 120
-
-person
-false
-0
-Circle -7500403 true true 110 5 80
-Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
-Rectangle -7500403 true true 127 79 172 94
-Polygon -7500403 true true 195 90 240 150 225 180 165 105
-Polygon -7500403 true true 105 90 60 150 75 180 135 105
-
-plant
-false
-0
-Rectangle -7500403 true true 135 90 165 300
-Polygon -7500403 true true 135 255 90 210 45 195 75 255 135 285
-Polygon -7500403 true true 165 255 210 210 255 195 225 255 165 285
-Polygon -7500403 true true 135 180 90 135 45 120 75 180 135 210
-Polygon -7500403 true true 165 180 165 210 225 180 255 120 210 135
-Polygon -7500403 true true 135 105 90 60 45 45 75 105 135 135
-Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
-Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
-
-salesman
-false
-0
-Circle -7500403 true true 110 5 80
-Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
-Rectangle -7500403 true true 127 79 172 94
-Polygon -7500403 true true 195 90 240 150 225 180 165 105
-Polygon -7500403 true true 105 90 60 150 75 180 135 105
-Rectangle -6459832 true false 210 180 240 240
-
-square
-false
-0
-Rectangle -7500403 true true 30 30 270 270
-
-square 2
-false
-0
-Rectangle -7500403 true true 30 30 270 270
-Rectangle -16777216 true false 60 60 240 240
-
-star
-false
-0
-Polygon -7500403 true true 151 1 185 108 298 108 207 175 242 282 151 216 59 282 94 175 3 108 116 108
-
-target
-false
-0
-Circle -7500403 true true 0 0 300
-Circle -16777216 true false 30 30 240
-Circle -7500403 true true 60 60 180
-Circle -16777216 true false 90 90 120
-Circle -7500403 true true 120 120 60
-
-tree
-false
-0
-Circle -7500403 true true 118 3 94
-Rectangle -6459832 true false 120 195 180 300
-Circle -7500403 true true 65 21 108
-Circle -7500403 true true 116 41 127
-Circle -7500403 true true 45 90 120
-Circle -7500403 true true 104 74 152
-
-triangle
-false
-0
-Polygon -7500403 true true 150 30 15 255 285 255
-
-triangle 2
-false
-0
-Polygon -7500403 true true 150 30 15 255 285 255
-Polygon -16777216 true false 151 99 225 223 75 224
-
-truck
-false
-0
-Rectangle -7500403 true true 4 45 195 187
-Polygon -7500403 true true 296 193 296 150 259 134 244 104 208 104 207 194
-Rectangle -1 true false 195 60 195 105
-Polygon -16777216 true false 238 112 252 141 219 141 218 112
-Circle -16777216 true false 234 174 42
-Rectangle -7500403 true true 181 185 214 194
-Circle -16777216 true false 144 174 42
-Circle -16777216 true false 24 174 42
-Circle -7500403 false true 24 174 42
-Circle -7500403 false true 144 174 42
-Circle -7500403 false true 234 174 42
-
-turtle
-true
-0
-Polygon -10899396 true false 215 204 240 233 246 254 228 266 215 252 193 210
-Polygon -10899396 true false 195 90 225 75 245 75 260 89 269 108 261 124 240 105 225 105 210 105
-Polygon -10899396 true false 105 90 75 75 55 75 40 89 31 108 39 124 60 105 75 105 90 105
-Polygon -10899396 true false 132 85 134 64 107 51 108 17 150 2 192 18 192 52 169 65 172 87
-Polygon -10899396 true false 85 204 60 233 54 254 72 266 85 252 107 210
-Polygon -7500403 true true 119 75 179 75 209 101 224 135 220 225 175 261 128 261 81 224 74 135 88 99
-
-wheel
-false
-0
-Circle -7500403 true true 3 3 294
-Circle -16777216 true false 30 30 240
-Line -7500403 true 150 285 150 15
-Line -7500403 true 15 150 285 150
-Circle -7500403 true true 120 120 60
-Line -7500403 true 216 40 79 269
-Line -7500403 true 40 84 269 221
-Line -7500403 true 40 216 269 79
-Line -7500403 true 84 40 221 269
-
-x
-false
-0
-Polygon -7500403 true true 270 75 225 30 30 225 75 270
-Polygon -7500403 true true 30 75 75 30 270 225 225 270
-@#$#@#$#@
-NetLogo 6.0.3
-@#$#@#$#@
-@#$#@#$#@
-@#$#@#$#@
-<experiments>
-  <experiment name="swap-mutation" repetitions="10" runMetricsEveryStep="true">
-    <setup>united_kingdom
-setup</setup>
-    <go>go</go>
-    <metric>min-fitness</metric>
-    <enumeratedValueSet variable="population-size">
-      <value value="251"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="crossover-rate">
-      <value value="90"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="tournament-size">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mutation-rate">
-      <value value="12.1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-cycles">
-      <value value="304"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="preserve-common-links?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="swap-mutation?">
-      <value value="true"/>
-    </enumeratedValueSet>
-  </experiment>
-</experiments>
-@#$#@#$#@
-@#$#@#$#@
-default
-0.0
--0.2 0 0.0 1.0
-0.0 1 1.0 0.0
-0.2 0 0.0 1.0
-link direction
-true
-0
-Line -7500403 true 150 150 90 180
-Line -7500403 true 150 150 210 180
-@#$#@#$#@
-0
-@#$#@#$#@
