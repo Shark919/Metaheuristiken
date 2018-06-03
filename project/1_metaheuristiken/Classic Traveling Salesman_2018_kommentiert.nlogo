@@ -71,6 +71,7 @@ globals [
   string-drawn;;     ;;welche Rundreise zuvor auf der Map gezeichnet wurde (wird benötigt, um die Zeichnung zu aktualisieren und die alte Rundreise auszuradieren)
   start-time;;       ;;speichert die Uhrzeit und das Datum, wenn Algorithmus gestartet wird, wird auch im Interface angezeigt
   end-time;;         ;;speichert die Uhrzeit und das Datum, wenn Algorithmus terminiert (hier: die ticks haben die vorgegebene Anzahl Generationen erreicht), im Interface zu sehen
+  list-of-loosers    ;;speichert die schlechtesten Ergebnisse im Falle einer Umweltselektion
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -163,7 +164,7 @@ to setup
  ]
 
   set string-drawn ""
-
+  set list-of-loosers []
   ;;für die erstellten Lösungen bzw. Individueen wird ...
   ask turtles [
     calculate-distance  ;;...die zurückzulegende Distanz berechnet
@@ -279,7 +280,7 @@ to calculate-distance
 
 end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;FITNESS PROCEDURE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;FITNESS PROCEDURES;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;berechnet für jede einzelne Lösung (Turtle) die Fitness (hier: gleich der Routenlänge)
@@ -293,11 +294,10 @@ to calculate-winner-looser-fintess
   set looser max-one-of turtles [fitness] ;;  hier wird auch das schlechteste Individuum gespeichert (im weiteren Verlauf bisher aber nicht wirklich verwendet)
 end
 
-;;>>>>>>>>
-;;hier erfolgt das Setzen von "winner" und "looser" mit jeder Fitnessberechnung eines Turtles
-;;aus Performanzgründen (für größere Problemstellungen) könnte das Setzen von "winner" und "looser" auch in einer eigenständigen Prozedur durchgeführt werden
-;;diese müsste dann immer nachträglich aufgerufen werden, nachdem für alle Turtles die Fitness berechnet wurde
-;;<<<<<<<<
+to eliminate-on-environment-selection
+  let no_of_loosers ceiling (population-size / environment_selection_size)
+  set list-of-loosers min-n-of no_of_loosers turtles [fitness]
+end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;NEW GENERATION PROCEDURE;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -319,18 +319,16 @@ to create-new-generation
     let previous 0
 
     foreach sort-on [(fitness)] turtles
-    [ the-turtle -> ask the-turtle [set rouletteWheel previous + 1 - (fitness / sumFitness)
-                                    set previous rouletteWheel] ]
+    [ rouletteTurtle -> ask rouletteTurtle [set rouletteWheel previous + 1 - (fitness / sumFitness)
+                                            set previous rouletteWheel] ]
 
     let maxRouletteWheel max [rouletteWheel] of turtles
     foreach sort-on [(fitness)] turtles
-    [ the-turtle -> ask the-turtle [set rouletteWheel maxRouletteWheel - rouletteWheel] ]
+    [ rouletteTurtle -> ask rouletteTurtle [set rouletteWheel maxRouletteWheel - rouletteWheel] ]
   ]
 
-  let list_of_loosers []
   if environment? [
-    let no_of_loosers ceiling (population-size / environment_selection_size)
-    set list_of_loosers min-n-of no_of_loosers turtles [fitness]
+    eliminate-on-environment-selection
   ]
 
   ask turtles [
@@ -340,7 +338,7 @@ to create-new-generation
       ;; do nothing as we do not want to replace the best solution
     ]
     [
-  if random-float 100.0 < crossover-rate or member? self list_of_loosers [
+  if random-float 100.0 < crossover-rate or member? self list-of-loosers[
 
   ;; falls eine zufällig gezogene Zahl bis 100 unterhalb der voreingestellten Crossover-Rate liegt, dann soll die bestehende Lösung durch eine neue ersetzt werden
 
@@ -1285,7 +1283,7 @@ SWITCH
 75
 preserve-common-links?
 preserve-common-links?
-1
+0
 1
 -1000
 
@@ -1362,7 +1360,7 @@ SWITCH
 139
 elitism?
 elitism?
-0
+1
 1
 -1000
 
@@ -1374,7 +1372,7 @@ CHOOSER
 recombination?
 recombination?
 "mappedCrossover" "edgeRecombination"
-0
+1
 
 SLIDER
 9
@@ -1398,7 +1396,7 @@ SWITCH
 172
 environment?
 environment?
-0
+1
 1
 -1000
 
@@ -1410,8 +1408,8 @@ SLIDER
 environment_selection_size
 environment_selection_size
 0
-100
-38.0
+50
+13.0
 1
 1
 NIL
