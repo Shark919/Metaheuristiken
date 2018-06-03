@@ -159,10 +159,7 @@ to setup
    ;;set string remove-duplicates string ] ]
    ;;<<<<<<
 
-   ;; um eine vollständig gültige Rundreise zu bekommen wird an den Anfang und an das Ende der Liste jeweils die Stadt 0 hinzugefügt
-   ;;>>>> das muss nicht zwangsläufig hier geschehen, sondern wäre (!!je nach Implementierung der Prozedur "calculate-distance"!!) ein paar Zeilen weiter unten besser aufgehoben <<<<<<
-   ;;set string fput 0 string;;dies könnte auch erst nach calculate-distance geschehen
-   ;;set string lput 0 string;;dies könnte auch erst nach calculate-distance geschehen
+
  ]
 
   set string-drawn ""
@@ -172,12 +169,10 @@ to setup
     calculate-distance  ;;...die zurückzulegende Distanz berechnet
     calculate-fitness   ;;...die entsprechende Fitness des Individuums berechnet (hier: entspricht der Distanz der Rundreise)
     set rouletteWheel 0
-    ;;>>>>>>>>
-    ;;hier wäre eine Modifizierung der ursprünglichen Implementierung möglich, da die Prozedur "calculate-distance" in der aktuellen Implementierung davon ausgeht,
-    ;;dass Start/Endort NICHT in der Liste aufgeführt sind; so dass es sinnvoll wäre, erst hier die Stadt 0 in der Tourliste zu ergänzen (und nicht bereits oben)
+
     set string fput 0 string
     set string lput 0 string
-    ;;<<<<<<<<
+
    ]
   calculate-winner-looser-fintess
   do-plotting  ;;Aufruf der Plot-Funktion zur Darstellung der Fitness-Werte im Interface (fitness-plot bzw. best-fitness-plot)
@@ -288,11 +283,7 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;berechnet für jede einzelne Lösung (Turtle) die Fitness (hier: gleich der Routenlänge)
-;;>>>>>>>>>
-;;wenn gelten sollte, desto größer der Fitnesswert, desto besser das Individuum, müsste eigentlich mit 1/Routenlänge gearbeitet werden
-;;darauf basierend könnte dann später leichter z.B. eine Fitnessproportionale Selektion durchgeführt werden
-;;zu beachten ist allerdings auch, dass dann z.B. "winner" als "max-one-of" auszuwählen ist
-;;<<<<<<<<<
+
 to calculate-fitness
   set fitness pdistance
 end
@@ -320,17 +311,8 @@ to create-new-generation
  ;;da Start-und Endort der Rundreise durch die Stadt 0 fest vorgegeben sind, werden diese vor den Crossover-Operationen aus den einzelnen Lösungen entfernt
  ;;(und später wieder hinzugefügt)
 
-  ask turtles [set string remove-item 21 string  ;;
+  ask turtles [set string remove-item 21 string
                set string remove-item 0 string]
-
-  ;;Da der Edge Rekombination Crossover eingesetzt wird, bei dem aus zwei Elternteilen jeweils ein Kind erzeugt wird,
-  ;;wird im Folgenden im Rahmen der vorhandenen Implementierung einfach für jede aktuelle Lösung eine neue erstellt oder die alte Lösung beibehalten
-  ;;>>>>>>>>
-  ;;Hier wären Änderungen nötig, wenn z.B. Umweltselektion bzw. Elitismus hinzugefügt wird:
-  ;;ein mögliches Vorgehen zur Erstellung einer neuen Generation, das nicht allein darauf basiert die vorhandenen Lösungen durchzugehen
-  ;;und gegebenenfalls zu überschreiben, wird in der Implementierung des Beispiel-Models "Simple Genetic Algorithm" aus der NetLogo-Library deutlich
-  ;;(siehe unter File -> Models Library -> Computer Science -> Simple Genetic Algorithm)
-  ;;<<<<<<<<<
 
   if selection? = "roulette" [
     let sumFitness sum [fitness] of turtles
@@ -345,13 +327,21 @@ to create-new-generation
     [ the-turtle -> ask the-turtle [set rouletteWheel maxRouletteWheel - rouletteWheel] ]
   ]
 
+  let list_of_loosers []
+  if environment? [
+    let no_of_loosers ceiling (population-size / environment_selection_size)
+    set list_of_loosers min-n-of no_of_loosers turtles [fitness]
+  ]
+
   ask turtles [
+
   ifelse elitism? and self = winner
     [
       ;; do nothing as we do not want to replace the best solution
     ]
     [
-  if random-float 100.0 < crossover-rate [
+  if random-float 100.0 < crossover-rate or member? self list_of_loosers [
+
   ;; falls eine zufällig gezogene Zahl bis 100 unterhalb der voreingestellten Crossover-Rate liegt, dann soll die bestehende Lösung durch eine neue ersetzt werden
 
   ; if we simply wrote "LET OLD-GENERATION TURTLES",
@@ -362,19 +352,9 @@ to create-new-generation
   ; an agentset, which doesn't get updated when new solutions are created.
   let old-generation turtles with [true]
 
-  ;;Turnierbasierte Selektion zur Auswahl der beiden Elternpaare:
-  ;; für die beiden  Elternteile weren jeweils so viele Lösungen zufällig ausgewählt, wie durch die "tournament-size" vorgegeben wird
-  ;; diese Lösungen werden dann anhand der Fitness bewertet und jeweils diejenige mit der besten Fitness (hier: geringste Tourlänge) ausgewählt
-  ;;>>>>>> sollte die Fitnessbewertung angepasst worden sein, ist hier zu prüfen, ob statt "min-one-of" besser "max-one-of" zu wählen ist <<<<<<
-  ;;let parent1-p max-one-of (n-of tournament-size old-generation) [fitness]
-  ;;let parent2-p max-one-of (n-of tournament-size old-generation) [fitness]
-  ;;>>>>>> wenn die Selektionsmethode geändert wird, wäre statt der obigen Zeilen eine Anpassung bzw. Neuimplementierung erforderlich <<<<<<
-
-
   let parent1-p 0
   let parent2-p 0
 
-  ;; NOTE: Bei turnierbasierter Selektion ist es möglich parent1 und parent2 mit dem gleichen Elternteil zu besetzten. Ist das sinnvoll?
   if selection? = "match" [
         ;;Turnierbasierte Selektion zur Auswahl der beiden Elternpaare:
         ;; für die beiden  Elternteile weren jeweils so viele Lösungen zufällig ausgewählt, wie durch die "tournament-size" vorgegeben wird
@@ -389,11 +369,10 @@ to create-new-generation
         set parent2-p rnd:weighted-one-of turtles [ rouletteWheel ]
    ]
 
-  if recombination? = "edgeRecombination" [
-        ;;>>>>>>Beginn des Edge Recombination Crossover
-        ;;>>>>>>wenn Crossover-Operator geändert wird, wäre hier eine Anpassung nötig
         let parent1 [string] of parent1-p
         let parent2 [string] of parent2-p
+
+  if recombination? = "edgeRecombination" [
 
         let x 0
         let edgetable1 []
@@ -610,14 +589,10 @@ to create-new-generation
 
         set string child1
 
- ;;<<<<<<wenn Crossover-Operator geändert wird, wäre hier eine Anpassung nötig
- ;;<<<<<<Ende des Edge Recombination Crossover
       ]
 
 
   if recombination? = "mappedCrossover" [
-        let parent1 [string] of parent1-p
-        let parent2 [string] of parent2-p
 
         let random1 random ((length parent1) / 2)
         if random1 < 2 [set random1 random1 + 1]
@@ -686,6 +661,9 @@ to create-new-generation
 
 end
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;Prozedur für den Edge Recombination Crossover zur Listenverwaltung
 to-report shortest [n wholelist]
@@ -794,12 +772,10 @@ to mutate
       ;;zwei Orte werden einfach durch Zufallszahlen überschrieben,
       ;; da die entstehende Tour vermutlich nicht mehr zulässig ist, muss nachträglich "fix-list" aufgerufen werden
       [if random-float 100.0 < mutation-rate [set string replace-item random-item string random-number
-                                              set string replace-item random-item2 string random-number2]]
+                                              set string replace-item random-item2 string random-number2
+                                              fix-list]] ;;Reparatur der durch Mutation veränderten Routen, aufgrund der Implementierung ist dies nur für für die two point random mutation nötig
     ]
   ]
-
-  ;;Reparatur der durch Mutation veränderten Routen, aufgrund der Implementierung ist dies auch für die two point swap mutation nötig
-  fix-list
 
 end
 
@@ -1185,10 +1161,10 @@ NIL
 HORIZONTAL
 
 PLOT
-16
-259
-492
-514
+10
+301
+486
+556
 fitness-plot
 time
 fitness
@@ -1248,17 +1224,17 @@ tournament-size
 tournament-size
 2
 10
-5.0
+2.0
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-16
-214
-158
-259
+10
+256
+152
+301
 Best Global Fitness
 global-min-fitness
 15
@@ -1266,10 +1242,10 @@ global-min-fitness
 11
 
 MONITOR
-159
-214
-492
-259
+153
+256
+486
+301
 Best Global Solution
 global-min-string
 17
@@ -1314,10 +1290,10 @@ preserve-common-links?
 -1000
 
 PLOT
-15
-524
-471
-840
+610
+458
+1066
+774
 best-fitness-plot
 time
 fitness
@@ -1391,10 +1367,10 @@ elitism?
 -1000
 
 CHOOSER
-205
-138
-403
-183
+10
+184
+206
+229
 recombination?
 recombination?
 "mappedCrossover" "edgeRecombination"
@@ -1411,6 +1387,32 @@ number-of-cycles
 1000
 450.0
 2
+1
+NIL
+HORIZONTAL
+
+SWITCH
+204
+139
+402
+172
+environment?
+environment?
+0
+1
+-1000
+
+SLIDER
+205
+171
+402
+204
+environment_selection_size
+environment_selection_size
+0
+100
+38.0
+1
 1
 NIL
 HORIZONTAL
