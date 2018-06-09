@@ -1,89 +1,55 @@
 patches-own [
-  living?         ;; indicates if the cell is living
   live-neighbors  ;; counts how many neighboring cells are alive
 ]
 
-globals [
- ; cellColors
-]
-
 to setup-blank
-  let cellColors [blue green red white]
   clear-all
   ask patches [
-    cell-death
-    set pcolor one-of cellColors
+    set pcolor bgcolor
   ]
   reset-ticks
 end
 
 to setup-random
+  let cellColors [105 55 5 15] ; entspricht [blau grün grau rot]
   clear-all
-  ask patches
-    [ ifelse random-float 100.0 < initial-density
-      [ cell-birth ]
-      [ cell-death ] ]
+  ask patches [
+    set pcolor one-of cellColors
+  ]
   reset-ticks
 end
 
-to cell-birth
-  set living? true
-  set pcolor fgcolor
-end
-
-to cell-death
-  set living? false
-  set pcolor bgcolor
-end
-
 to go
-  let cellColors [blue green red white]
+  let cellColors [105 55 5 15] ; entspricht [blau grün grau rot]
   ask patches [
-    let y (position pcolor cellColors + 1) mod 4
-    let blue-neighbors count neighbors with [pcolor = blue]
-    let green-neighbors count neighbors with [pcolor = green]
-    let red-neighbors count neighbors with [pcolor = red]
-    let white-neighbors count neighbors with [pcolor = white]
-    ask neighbors [
-    print self
-    ]
-
-    set live-neighbors count neighbors with [living?]
+    let next-color item (((position pcolor cellColors) + 1) mod 4) cellColors
+    set live-neighbors count neighbors with [pcolor = next-color]
   ]
   ;; Starting a new "ask patches" here ensures that all the patches
   ;; finish executing the first ask before any of them start executing
   ;; the second ask.  This keeps all the patches in synch with each other,
   ;; so the births and deaths at each generation all happen in lockstep.
-  ask patches
-    [ ifelse live-neighbors = 3
-      [ cell-birth ]
-      [ if live-neighbors != 2
-        [ cell-death ] ] ]
+  ask patches [
+    if live-neighbors >= threshold [
+      let next-color item (((position pcolor cellColors) + 1) mod 4) cellColors
+      set pcolor next-color
+    ]
+  ]
   tick
 end
 
-to draw-cells
-  let erasing? [living?] of patch mouse-xcor mouse-ycor
-  while [mouse-down?]
-    [ ask patch mouse-xcor mouse-ycor
-      [ ifelse erasing?
-        [ cell-death ]
-        [ cell-birth ] ]
-      display ]
-end
 
-
-; Copyright 1998 Uri Wilensky.
+; Copyright 1998 Uri Wilensky. Modified by Christopher Meise, Tim Walz June 2018.
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-285
+322
 10
-697
-423
+796
+485
 -1
 -1
-4.0
+4.614
 1
 10
 1
@@ -102,21 +68,6 @@ GRAPHICS-WINDOW
 1
 ticks
 15.0
-
-SLIDER
-120
-67
-276
-100
-initial-density
-initial-density
-0.0
-100.0
-0.0
-0.1
-1
-%
-HORIZONTAL
 
 BUTTON
 11
@@ -169,23 +120,6 @@ NIL
 NIL
 0
 
-BUTTON
-178
-276
-274
-309
-recolor
-ifelse living?\n  [ set pcolor fgcolor ]\n  [ set pcolor bgcolor ]
-NIL
-1
-T
-PATCH
-NIL
-NIL
-NIL
-NIL
-0
-
 MONITOR
 12
 248
@@ -214,44 +148,6 @@ NIL
 NIL
 1
 
-TEXTBOX
-124
-125
-283
-193
-When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\".
-11
-0.0
-0
-
-BUTTON
-9
-134
-112
-169
-NIL
-draw-cells
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-INPUTBOX
-119
-309
-274
-369
-fgcolor
-0.0
-1
-0
-Color
-
 INPUTBOX
 119
 371
@@ -268,11 +164,11 @@ SLIDER
 320
 119
 353
-ColorChange
-ColorChange
+threshold
+threshold
 1
 4
-0.0
+2.0
 1
 1
 NIL
