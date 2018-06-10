@@ -200,7 +200,6 @@ to go
                                STOP]
 
   ;;in jeder Iteration wird durch die Prozedur "create-new-generation" eine neue Generation von Lösungen erstellt
-  ;;dies beinhaltet aktuell eine Paarungsselektion sowie Mutation
   create-new-generation
 
   ;;es wird geprüft, ob der Lösungswert der besten Lösung aus der neuen Generation die bisher beste bekannte Lösung übertrifft
@@ -304,20 +303,21 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;hier findet die Erstellung der neuen Generation an Individuen statt
-;; in der vorliegenden Implementierung beinhaltet dies Paarungsselektion und den anschließenden Aufruf einer Prozedur zur Mutation der Individueen
-;; >>>>>> eine Umweltselektion ist hier bisher nicht implementiert <<<<<<<
+
 to create-new-generation
 
  ;;da Start-und Endort der Rundreise durch die Stadt 0 fest vorgegeben sind, werden diese vor den Crossover-Operationen aus den einzelnen Lösungen entfernt
- ;;(und später wieder hinzugefügt)
 
   ask turtles [set string remove-item 21 string
                set string remove-item 0 string]
 
+  ;; Falls Roulette - Selektion gewählt wurde, sollen die folgenden Berechnungen ausgeführt werden
   if selection? = "roulette" [
-    let sumFitness sum [fitness] of turtles
-    let previous 0
+    let sumFitness sum [fitness] of turtles      ;; Summe der Fitness von allen Turtles
+    let previous 0                               ;; Hilfsvariable
 
+    ;; Iteriere über die nach Fitness sortierten Turtles
+    ;;
     foreach sort-on [(fitness)] turtles
     [ rouletteTurtle -> ask rouletteTurtle [set rouletteWheel previous + 1 - (fitness / sumFitness)
                                             set previous rouletteWheel] ]
@@ -335,7 +335,7 @@ to create-new-generation
 
   ifelse elitism? and self = winner
     [
-      ;; do nothing as we do not want to replace the best solution
+      ;; führe keine Aktion aus, da die besten Lösungen beibehalten werden sollen
     ]
     [
   if random-float 100.0 < crossover-rate or member? self list-of-loosers[
@@ -1360,7 +1360,7 @@ SWITCH
 139
 elitism?
 elitism?
-1
+0
 1
 -1000
 
@@ -1396,7 +1396,7 @@ SWITCH
 172
 environment?
 environment?
-1
+0
 1
 -1000
 
@@ -1409,7 +1409,7 @@ environment_selection_size
 environment_selection_size
 0
 50
-13.0
+48.0
 1
 1
 NIL

@@ -25,10 +25,7 @@ to go
     let next-color item (((position pcolor cellColors) + 1) mod 4) cellColors
     set live-neighbors count neighbors with [pcolor = next-color]
   ]
-  ;; Starting a new "ask patches" here ensures that all the patches
-  ;; finish executing the first ask before any of them start executing
-  ;; the second ask.  This keeps all the patches in synch with each other,
-  ;; so the births and deaths at each generation all happen in lockstep.
+
   ask patches [
     if live-neighbors >= threshold [
       let next-color item (((position pcolor cellColors) + 1) mod 4) cellColors
@@ -153,7 +150,7 @@ INPUTBOX
 293
 375
 bgcolor
-0.0
+74.0
 1
 0
 Color
