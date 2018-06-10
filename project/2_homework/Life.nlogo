@@ -38,6 +38,16 @@ to go
   tick
 end
 
+;; =========== Beobachtungen
+;; Threshold auf 1
+;;; Starkes Rauschen im Bild, keine klaren Muster zu erkennen
+;; Threshold auf 2
+;;; Es bilded sich häufig ein ähnliches Muster von rotierenden Spiralen
+;; Threshhold auf 3
+;;; Kein klares Muster zu erkennen, jedoch meistens "rundliche" Bewegung von Farben
+;; Threshold auf 4
+;;; Bereits nach wenigen Iterationen ist meist ein statisches Bild erreicht
+
 
 ; Copyright 1998 Uri Wilensky. Modified by Christopher Meise, Tim Walz June 2018.
 ; See Info tab for full copyright and license.
@@ -120,17 +130,6 @@ NIL
 NIL
 0
 
-MONITOR
-12
-248
-115
-293
-current density
-count patches with\n  [living?]\n/ count patches
-2
-1
-11
-
 BUTTON
 11
 32
@@ -149,10 +148,10 @@ NIL
 1
 
 INPUTBOX
-119
-371
-274
-431
+138
+315
+293
+375
 bgcolor
 0.0
 1
@@ -168,7 +167,7 @@ threshold
 threshold
 1
 4
-2.0
+4.0
 1
 1
 NIL
