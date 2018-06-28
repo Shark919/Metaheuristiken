@@ -1,3 +1,4 @@
+extensions [ rnd ]
 globals
 [
   height               ;; height of the map
@@ -16,6 +17,7 @@ cars-own
   preference
   fuelThreshold
   movingToStation
+  surroundingGasStations
 ]
 
 gasstations-own
@@ -33,16 +35,23 @@ gasstations-own
 to setup
   clear-all
   setup-globals
-
+  let i 0
   create-cars number-of-cars
   [
     setup-cars
   ]
-  create-gasstations number-of-stations
+  create-gasstations (leading-gas-stations + following-gas-stations)
   [
     setup-gasstations
+    ifelse i < leading-gas-stations
+    [ set color red
+      set brand 0
+    ][
+      set color green
+      set brand 1
+    ]
+    set i i + 1
   ]
-
   reset-ticks
 end
 
@@ -51,29 +60,21 @@ to go
     move
     set currentFuel currentFuel - consumptionRate
     if currentFuel <= fuelThreshold [
-      refuel
+      search
+      decide
     ]
     death
   ]
   ask gasstations [
 
   ]
-  if ticks mod 10 = 0 [
-    set oilPrice oilPrice + random-float 0.1 - random-float 0.1
-    ask gasstations [
-      if brand = 0 [
-        set price oilPrice + 0.06
-      ]
-      if brand = 1 [
-        set price oilPrice + 0.04
-      ]
-      if brand = 2 [
-        set price oilPrice + 0.02
-      ]
-      set label precision price 2
-      ;; set price according to oilPrice and brands
-    ]
+
+  if ticks mod 24 = 0 or ticks = 0 [
+    setDailyPrice
   ]
+
+  setHourlyPrice
+
   tick
   display-labels
 end
@@ -96,8 +97,6 @@ to setup-gasstations
   set size 2
   setxy random-xcor random-ycor
 
-  set price (1.5 - random-float 1.0)
-  set brand random 3
   set demand 0
   set label precision price 2
 end
@@ -112,45 +111,81 @@ to setup-cars
   set maxCapacity 100
   set currentFuel (100 - random 20)
   set consumptionRate (4 - random 3)
-  set preference random 3
+  set preference random 2
   set fuelThreshold 20
+  set surroundingGasStations []
 end
 
 to display-labels
   ask cars [ set label round currentFuel ]
 end
 
-to refuel
-  ;; todo: preference to gasstation when chosing target-station
-  set movingToStation true
-  ;let target-station nobody
-  ;let bestFactor 0
-  ;ask gasstations in-radius 25
-  ;[
-  ;  let factor [distance car 1] of gasstation 0
-  ;  if preference = brand [set factor factor * 2]
-  ;  if factor > bestFactor [
-  ;    set bestFactor factor
-  ;    set target-station myself
-  ;  ]
-  ;]
+to setDailyPrice
+  set oilPrice (oilPrice + random-float 0.1 - random-float 0.1)
+ let leadingPrice oilPrice + random-float 0.1
+  ask gasstations [
+    ifelse brand = 0 [
+      set price leadingPrice
+    ][
+      set price leadingPrice + random-float 0.03 - random-float 0.07
+    ]
+    set label precision price 2
+  ]
+end
 
-  let target-station min-one-of (gasstations in-radius 25) [distance myself]
+to setHourlyPrice
+
+
+end
+
+to search
+  set movingToStation true
+  set surroundingGasStations (gasstations in-radius 10)
+end
+
+to decide
+  let distanceMatrix []
+  let priceMatrix []
+  let target-station nobody
+
+  if any? surroundingGasStations [
+    ask surroundingGasStations [
+      set distanceMatrix lput (distance myself) distanceMatrix
+      set priceMatrix lput price priceMatrix
+    ]
+    let target-station-minDistance min-one-of surroundingGasStations [distance myself]
+    let target-station-minPrice min-one-of surroundingGasStations [price]
+
+    ifelse target-station-minDistance = target-station-minPrice [
+      set target-station target-station-minPrice
+    ][
+      let target-station-min2Price min-n-of 2 surroundingGasStations [price]
+      ifelse not (member? target-station-minDistance target-station-min2Price) [
+        set target-station target-station-minPrice
+      ][
+        set target-station target-station-minDistance
+      ]
+
+    ]
+  ]
   if target-station != nobody  [
     face target-station
-  ]
-  ifelse distance target-station < 1
+
+    ifelse distance target-station < 1
       [
         move-to target-station
         set currentFuel maxCapacity
         set movingToStation false
-        ask min-one-of gasstations in-radius 25 [distance myself]
-        [
+        ask target-station [
           set visited visited + 1
           set demand visited / ticks
         ]
-      ]
-      [ fd 1 ]
+    ][
+        fd 1
+    ]
+  ]
+
+
 end
 
 to death
@@ -178,8 +213,8 @@ GRAPHICS-WINDOW
 16
 -16
 16
-0
-0
+1
+1
 1
 ticks
 30.0
@@ -221,7 +256,7 @@ NIL
 MONITOR
 17
 69
-74
+155
 114
 Oil Price
 oilPrice
@@ -238,22 +273,22 @@ number-of-cars
 number-of-cars
 5
 20
-5.0
+15.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-18
-198
-190
-231
-number-of-stations
-number-of-stations
-3
+214
+180
+409
+213
+following-gas-stations
+following-gas-stations
+2
 10
-4.0
+3.0
 1
 1
 NIL
@@ -294,6 +329,21 @@ false
 "" ""
 PENS
 "default" 1.0 1 -16777216 true "" "plot-pen-reset\nforeach sort cars [ [t] -> ask t [ plot currentFuel ] ]"
+
+SLIDER
+17
+180
+201
+213
+leading-gas-stations
+leading-gas-stations
+0
+5
+2.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?

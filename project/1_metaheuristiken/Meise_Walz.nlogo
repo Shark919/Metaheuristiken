@@ -327,6 +327,7 @@ to create-new-generation
     [ rouletteTurtle -> ask rouletteTurtle [set rouletteWheel maxRouletteWheel - rouletteWheel] ]
   ]
 
+  ;; Wird aus Laufzeitgründen nur berechnet, wenn Environment-Selection vom Nutzer gewünscht wird.
   if environment? [
     eliminate-on-environment-selection
   ]
