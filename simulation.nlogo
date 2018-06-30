@@ -26,6 +26,7 @@ gasstations-own
   brand
   demand
   visited
+  earnings
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -43,6 +44,8 @@ to setup
   create-gasstations (leading-gas-stations + following-gas-stations)
   [
     setup-gasstations
+  ]
+  ask gasstations [
     ifelse i < leading-gas-stations
     [ set color red
       set brand 0
@@ -65,18 +68,15 @@ to go
     ]
     death
   ]
-  ask gasstations [
 
-  ]
-
-  if ticks mod 24 = 0 or ticks = 0 [
+  ifelse ticks = 0 or ticks mod 24 = 0 [
     setDailyPrice
+  ][
+    setHourlyPrice
   ]
 
-  setHourlyPrice
-
-  tick
   display-labels
+  tick
 end
 
 to move  ; turtle procedure
@@ -89,7 +89,7 @@ end
 to setup-globals
   set height 300
   set width 300
-  set oilPrice 1.31
+  set oilPrice 1.35
 end
 
 to setup-gasstations
@@ -98,6 +98,7 @@ to setup-gasstations
   setxy random-xcor random-ycor
 
   set demand 0
+  set earnings 0
   set label precision price 2
 end
 
@@ -110,9 +111,9 @@ to setup-cars
   set movingToStation false
   set maxCapacity 100
   set currentFuel (100 - random 20)
-  set consumptionRate (4 - random 3)
+  set consumptionRate (3 - random 2)
   set preference random 2
-  set fuelThreshold 20
+  set fuelThreshold 25
   set surroundingGasStations []
 end
 
@@ -122,12 +123,15 @@ end
 
 to setDailyPrice
   set oilPrice (oilPrice + random-float 0.1 - random-float 0.1)
- let leadingPrice oilPrice + random-float 0.1
+  let leadingPrice oilPrice + random-float 0.1
   ask gasstations [
     ifelse brand = 0 [
       set price leadingPrice
     ][
-      set price leadingPrice + random-float 0.03 - random-float 0.07
+      set price leadingPrice - random-float 0.02
+      if price < oilPrice [
+        set price leadingPrice
+      ]
     ]
     set label precision price 2
   ]
@@ -135,12 +139,29 @@ end
 
 to setHourlyPrice
 
+  let cheapestGasStation min-one-of gasstations [price]
+  let tmpRandom random-float 0.02
+  ask gasstations [
+
+    ifelse demand <= (mean [demand] of gasstations) [
+      ifelse [price] of cheapestGasStation - tmpRandom > oilPrice [
+        set price [price] of cheapestGasStation - tmpRandom
+      ][
+        set price [price] of cheapestGasStation
+      ]
+    ][
+      if price + tmpRandom < oilPrice + 0.25 [
+        set price price + tmpRandom
+      ]
+    ]
+    set label precision price 2
+  ]
 
 end
 
 to search
   set movingToStation true
-  set surroundingGasStations (gasstations in-radius 10)
+  set surroundingGasStations (gasstations in-radius 15)
 end
 
 to decide
@@ -160,26 +181,26 @@ to decide
       set target-station target-station-minPrice
     ][
       let target-station-min2Price min-n-of 2 surroundingGasStations [price]
-      ifelse not (member? target-station-minDistance target-station-min2Price) [
-        set target-station target-station-minPrice
-      ][
+      ifelse member? target-station-minDistance target-station-min2Price [
         set target-station target-station-minDistance
+      ][
+        set target-station target-station-minPrice
       ]
 
     ]
   ]
   if target-station != nobody  [
     face target-station
-
     ifelse distance target-station < 1
       [
         move-to target-station
-        set currentFuel maxCapacity
         set movingToStation false
         ask target-station [
+          set earnings earnings + ([maxCapacity] of myself - [currentFuel] of myself) * (price - oilPrice)
           set visited visited + 1
           set demand visited / ticks
         ]
+        set currentFuel maxCapacity
     ][
         fd 1
     ]
@@ -305,7 +326,7 @@ NIL
 0.0
 6.0
 0.0
-0.5
+0.3
 true
 false
 "" ""
@@ -344,6 +365,42 @@ leading-gas-stations
 1
 NIL
 HORIZONTAL
+
+PLOT
+19
+454
+279
+604
+Earnings of gasstations
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 1 -16777216 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot earnings ] ]"
+
+PLOT
+381
+456
+637
+606
+Marge of gasstation
+NIL
+NIL
+0.0
+10.0
+0.0
+0.3
+false
+false
+"" ""
+PENS
+"default" 1.0 1 -11085214 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot (price - oilPrice) ] ]"
 
 @#$#@#$#@
 ## WHAT IS IT?
