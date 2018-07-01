@@ -127,7 +127,7 @@ end
 
 to setDailyPrice
   set oilPrice (oilPrice + random-float 0.1 - random-float 0.1)
-  let leadingPrice oilPrice + random-float 0.1
+  let leadingPrice oilPrice + 0.1 - random-float 0.07
   ask gasstations [
     ifelse brand = 0 [
       set price leadingPrice

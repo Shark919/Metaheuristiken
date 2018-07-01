@@ -127,12 +127,12 @@ end
 
 to setDailyPrice
   set oilPrice (oilPrice + random-float 0.1 - random-float 0.1)
-  let leadingPrice oilPrice + random-float 0.1
+  let leadingPrice oilPrice + 0.1 - random-float 0.07
   ask gasstations [
     ifelse brand = 0 [
       set price leadingPrice
     ][
-      set price leadingPrice - random-float 0.02
+      set price leadingPrice - random-float 0.03
       if price < oilPrice [
         set price leadingPrice
       ]
@@ -142,7 +142,6 @@ to setDailyPrice
 end
 
 to setHourlyPrice
-
   let cheapestGasStation min-one-of gasstations [price]
   let tmpRandom random-float 0.02
   ask gasstations [
@@ -201,7 +200,6 @@ to decide
         if subjectiveValue < -0.05 [
           set refuelAtOtherStation true
         ]
-
       ]
       ifelse refuelAtOtherStation = true [
         refuelPartly
@@ -234,13 +232,13 @@ to refuelPartly
   set movingToStation false
   let stationPrice 0
   ask targetStation [
-    set earnings earnings + ([maxCapacity / 2] of myself - [currentFuel] of myself) * (price - oilPrice)
+    set earnings earnings + ([maxCapacity * 0.1] of myself - [currentFuel] of myself) * (price - oilPrice)
     set visited visited + 1
     set demand visited / ticks
     set stationPrice price
   ]
   set lastKnownPrice stationPrice
-  set currentFuel maxCapacity / 2
+  set currentFuel currentFuel + maxCapacity * 0.1
 end
 
 to death
