@@ -165,7 +165,7 @@ end
 
 to search
   set movingToStation true
-  set surroundingGasStations (gasstations in-radius 15)
+  set surroundingGasStations (gasstations in-radius 25)
 end
 
 
@@ -197,14 +197,17 @@ to decide
     ifelse distance targetStation < 1 [
       ask targetStation [
         let subjectiveValue price - [lastKnownPrice] of myself
-          if subjectiveValue < -0.05 [
-            set refuelAtOtherStation true
-          ]
+
+        if subjectiveValue < -0.05 [
+          set refuelAtOtherStation true
+        ]
       ]
-      if refuelAtOtherStation = true [
+      ifelse refuelAtOtherStation = true [
+        refuelPartly
         set targetStation max-one-of (min-n-of 2 surroundingGasStations [distance myself]) [distance myself]
+      ][
+        refuel
       ]
-      refuel
     ][
       fd 1
     ]
@@ -225,6 +228,20 @@ to refuel
   set currentFuel maxCapacity
 end
 
+to refuelPartly
+  move-to targetStation
+  set movingToStation false
+  let stationPrice 0
+  ask targetStation [
+    set earnings earnings + ([maxCapacity / 2] of myself - [currentFuel] of myself) * (price - oilPrice)
+    set visited visited + 1
+    set demand visited / ticks
+    set stationPrice price
+  ]
+  set lastKnownPrice stationPrice
+  set currentFuel maxCapacity / 2
+end
+
 to death
   if currentFuel < 0 [ die ]
 end
@@ -232,13 +249,13 @@ end
 GRAPHICS-WINDOW
 855
 10
-1292
-448
+1526
+682
 -1
 -1
 13.0
 1
-10
+12
 1
 1
 1
@@ -246,15 +263,15 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
+-25
+25
+-25
+25
 1
 1
 1
 ticks
-30.0
+60.0
 
 BUTTON
 16
