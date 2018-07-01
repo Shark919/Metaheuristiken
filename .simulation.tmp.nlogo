@@ -197,6 +197,7 @@ to decide
     ifelse distance targetStation < 1 [
       ask targetStation [
         let subjectiveValue price - [lastKnownPrice] of myself
+
           if subjectiveValue < -0.05 [
             set refuelAtOtherStation true
           ]
@@ -232,13 +233,13 @@ end
 GRAPHICS-WINDOW
 855
 10
-1292
-448
+1526
+682
 -1
 -1
 13.0
 1
-10
+12
 1
 1
 1
@@ -246,15 +247,15 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
+-25
+25
+-25
+25
 1
 1
 1
 ticks
-30.0
+60.0
 
 BUTTON
 16
