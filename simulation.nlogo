@@ -1,14 +1,19 @@
 extensions [ rnd ]
 globals
 [
-  height               ;; height of the map
-  width                ;; width of the map
   oilPrice             ;; oil price
+  road
+  intersection
+  numberOfRows
+  numberOfColumns
+  spaceBetweenRows
+  spaceBetweenColumns
 ]
 
 
 breed[cars car]
 breed[gasstations gasstation]
+
 cars-own
 [
   maxCapacity     ;;
@@ -18,6 +23,7 @@ cars-own
   fuelThreshold
   movingToStation
   surroundingGasStations
+  lastPlaces
 ]
 
 gasstations-own
@@ -29,6 +35,12 @@ gasstations-own
   earnings
 ]
 
+patches-own
+[
+  isIntersection
+  row
+  column
+]
 ;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup Procedures ;;
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -36,6 +48,7 @@ gasstations-own
 to setup
   clear-all
   setup-globals
+  setup-streets
   let i 0
   create-cars number-of-cars
   [
@@ -58,15 +71,74 @@ to setup
   reset-ticks
 end
 
+;; Initialize the global variables to appropriate values
+to setup-globals
+  set oilPrice 1.35
+  set numberOfRows 3
+  set numberOfColumns 4
+  set spaceBetweenRows world-width / numberOfRows
+  set spaceBetweenColumns world-height / numberOfColumns
+end
+
+to setup-streets
+  ask patches
+  [
+    set isIntersection false
+    set row -1
+    set column -1
+    set pcolor brown
+
+    set road patches with
+       [(floor((pxcor + max-pxcor - floor(spaceBetweenRows - 1)) mod spaceBetweenRows) = 0) or
+       (floor((pycor + max-pycor) mod spaceBetweenColumns) = 0)]
+    set intersection road with
+       [(floor((pxcor + max-pxcor - floor(spaceBetweenRows - 1)) mod spaceBetweenRows) = 0) and
+       (floor((pycor + max-pycor) mod spaceBetweenColumns) = 0)]
+  ]
+  ask road [ set pcolor grey ]
+  ask intersection [
+    set isIntersection true
+    set row floor((pycor + max-pycor) / spaceBetweenColumns)
+    set column floor((pxcor + max-pxcor) / spaceBetweenRows)
+  ]
+end
+
+to setup-cars
+  set shape "car"
+  set size 1.5
+  set color blue
+  move-to one-of road
+
+  set movingToStation false
+  set maxCapacity 100
+  set currentFuel (100 - random 20)
+  set consumptionRate (3 - random 2)
+  set preference random 2
+  set fuelThreshold 25
+  set surroundingGasStations []
+  set lastPlaces []
+end
+
+to setup-gasstations
+  set shape "house"
+  set size 2
+  move-to one-of road with [not any? turtles-on self]
+
+  set demand 0
+  set earnings 0
+  set label precision price 2
+end
+
 to go
   ask cars [
-    move
     set currentFuel currentFuel - consumptionRate
-    if currentFuel <= fuelThreshold [
-      search
-      decide
+    set lastPlaces lput patch-here lastPlaces
+
+    if length lastPlaces > 4 [
+      set lastPlaces remove-item 0 lastPlaces
     ]
-    death
+
+    move
   ]
 
   ifelse ticks = 0 or ticks mod 24 = 0 [
@@ -80,41 +152,27 @@ to go
 end
 
 to move  ; turtle procedure
-  rt random 50
-  lt random 50
-  fd 1
-end
+  let movingOptions neighbors4 with [pcolor = 5]
+  let movingOptionsList []
+  ask movingOptions [
+    set movingOptionsList lput self movingOptionsList
+  ]
+  let moveTo one-of movingOptions
+  let i 0
 
-;; Initialize the global variables to appropriate values
-to setup-globals
-  set height 300
-  set width 300
-  set oilPrice 1.35
-end
+  while [i < length movingOptionsList] [
+    if not member? item i movingOptionsList lastPlaces or i = length movingOptionsList - 1 [
+      set moveTo item i movingOptionsList
+    ]
+    set i i + 1
+  ]
 
-to setup-gasstations
-  set shape "house"
-  set size 2
-  setxy random-xcor random-ycor
-
-  set demand 0
-  set earnings 0
-  set label precision price 2
-end
-
-to setup-cars
-  set shape "car"
-  set size 1.5
-  set color blue
-  setxy random-xcor random-ycor
-
-  set movingToStation false
-  set maxCapacity 100
-  set currentFuel (100 - random 20)
-  set consumptionRate (3 - random 2)
-  set preference random 2
-  set fuelThreshold 25
-  set surroundingGasStations []
+  move-to moveTo
+  if currentFuel <= fuelThreshold [
+    search
+    decide
+  ]
+  death
 end
 
 to display-labels
@@ -294,7 +352,7 @@ number-of-cars
 number-of-cars
 5
 20
-15.0
+6.0
 1
 1
 NIL
