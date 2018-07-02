@@ -23,7 +23,7 @@ cars-own
   fuelThreshold
   movingToStation
   surroundingGasStations
-  lastPlaces
+  target-station
 ]
 
 gasstations-own
@@ -116,13 +116,13 @@ to setup-cars
   set preference random 2
   set fuelThreshold 25
   set surroundingGasStations []
-  set lastPlaces []
+  set target-station nobody
 end
 
 to setup-gasstations
   set shape "house"
   set size 2
-  move-to one-of road with [not any? turtles-on self]
+  move-to one-of road
 
   set demand 0
   set earnings 0
@@ -132,13 +132,7 @@ end
 to go
   ask cars [
     set currentFuel currentFuel - consumptionRate
-    set lastPlaces lput patch-here lastPlaces
-
-    if length lastPlaces > 4 [
-      set lastPlaces remove-item 0 lastPlaces
-    ]
-
-    move
+    repeat 3 [move]
   ]
 
   ifelse ticks = 0 or ticks mod 24 = 0 [
@@ -153,21 +147,24 @@ end
 
 to move  ; turtle procedure
   let movingOptions neighbors4 with [pcolor = 5]
-  let movingOptionsList []
-  ask movingOptions [
-    set movingOptionsList lput self movingOptionsList
-  ]
-  let moveTo one-of movingOptions
-  let i 0
 
-  while [i < length movingOptionsList] [
-    if not member? item i movingOptionsList lastPlaces or i = length movingOptionsList - 1 [
-      set moveTo item i movingOptionsList
+  if movingToStation = false [
+    ifelse count movingOptions = 4 [
+      move-to one-of movingOptions
+    ][
+      ifelse [pxcor] of self = floor (world-width / 2) or [pycor] of self = floor (world-height / 2) [
+        move-to one-of movingOptions with [pxcor < [pxcor] of myself or pycor < [pycor] of myself ]
+      ][
+        let moveTo one-of movingOptions with [pxcor > [pxcor] of myself or pycor > [pycor] of myself ]
+        ifelse moveTo = nobody [
+          move-to one-of movingOptions
+        ][
+          move-to moveTo
+        ]
+      ]
     ]
-    set i i + 1
   ]
 
-  move-to moveTo
   if currentFuel <= fuelThreshold [
     search
     decide
@@ -218,16 +215,16 @@ to setHourlyPrice
 end
 
 to search
-  set movingToStation true
   set surroundingGasStations (gasstations in-radius 15)
 end
 
 to decide
   let distanceMatrix []
   let priceMatrix []
-  let target-station nobody
+  let tx 0
+  let ty 0
 
-  if any? surroundingGasStations [
+  if any? surroundingGasStations and target-station = nobody [
     ask surroundingGasStations [
       set distanceMatrix lput (distance myself) distanceMatrix
       set priceMatrix lput price priceMatrix
@@ -249,18 +246,21 @@ to decide
   ]
   if target-station != nobody  [
     face target-station
-    ifelse distance target-station < 1
-      [
-        move-to target-station
-        set movingToStation false
-        ask target-station [
-          set earnings earnings + ([maxCapacity] of myself - [currentFuel] of myself) * (price - oilPrice)
-          set visited visited + 1
-          set demand visited / ticks
-        ]
-        set currentFuel maxCapacity
+    set movingToStation true
+    set tx [pxcor] of target-station
+    set ty [pycor] of target-station
+    ifelse distance target-station < 1 [
+      move-to target-station
+      ask target-station [
+        set earnings earnings + ([maxCapacity] of myself - [currentFuel] of myself) * (price - oilPrice)
+        set visited visited + 1
+        set demand visited / ticks
+      ]
+      set currentFuel maxCapacity
+      set movingToStation false
+      set target-station nobody
     ][
-        fd 1
+      move-to min-one-of neighbors4 with [pcolor = 5] [distancexy tx ty]
     ]
   ]
 
@@ -352,7 +352,7 @@ number-of-cars
 number-of-cars
 5
 20
-6.0
+15.0
 1
 1
 NIL
