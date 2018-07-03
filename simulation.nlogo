@@ -161,10 +161,10 @@ end
 
 to setDailyPrice
 
+  if oilPrice > 1 and oilPrice < 1.6 [ set oilPrice (oilPrice + random-float 0.1 - random-float 0.1) ]
   if oilPrice >= 1.6 [ set oilPrice oilPrice - random 0.1 ]
   if oilPrice <= 1 [ set oilPrice oilPrice + random 0.1 ]
-  if oilPrice > 1 and oilPrice < 1.6 [ set oilPrice (oilPrice + random-float 0.1 - random-float 0.1) ]
-  let leadingPrice oilPrice + random-float 0.1
+  let leadingPrice oilPrice + abs (random-float 0.1 - random-float 0.06)
   ask gasstations [
     ifelse brand = 0 [
       set price leadingPrice
@@ -194,7 +194,7 @@ to setHourlyPrice
         set price [price] of cheapestGasStation
       ]
     ][
-      if price + tmpRandom < oilPrice + 0.25 [
+      if price + tmpRandom < oilPrice [
         set price price + tmpRandom
       ]
     ]
@@ -262,13 +262,13 @@ to death
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-855
+727
 10
-1292
-448
+1212
+496
 -1
 -1
-13.0
+14.463415
 1
 10
 1
@@ -342,7 +342,7 @@ number-of-cars
 number-of-cars
 5
 50
-50.0
+25.0
 1
 1
 NIL
@@ -357,7 +357,7 @@ following-gas-stations
 following-gas-stations
 2
 10
-5.0
+3.0
 1
 1
 NIL
