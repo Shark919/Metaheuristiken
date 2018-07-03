@@ -1,14 +1,18 @@
 extensions [ rnd ]
 globals
 [
-  height               ;; height of the map
-  width                ;; width of the map
   oilPrice             ;; oil price
+  road
+  numberOfRows
+  numberOfColumns
+  spaceBetweenRows
+  spaceBetweenColumns
 ]
 
 
 breed[cars car]
 breed[gasstations gasstation]
+
 cars-own
 [
   maxCapacity     ;;
@@ -18,6 +22,7 @@ cars-own
   fuelThreshold
   movingToStation
   surroundingGasStations
+  target-station
 ]
 
 gasstations-own
@@ -36,6 +41,7 @@ gasstations-own
 to setup
   clear-all
   setup-globals
+  setup-streets
   let i 0
   create-cars number-of-cars
   [
@@ -58,15 +64,58 @@ to setup
   reset-ticks
 end
 
+;; Initialize the global variables to appropriate values
+to setup-globals
+  set oilPrice 1.35
+  set numberOfRows 3
+  set numberOfColumns 4
+  set spaceBetweenRows world-width / numberOfRows
+  set spaceBetweenColumns world-height / numberOfColumns
+end
+
+to setup-streets
+  ask patches
+  [
+    set pcolor brown
+
+    set road patches with
+       [(floor((pxcor + max-pxcor - floor(spaceBetweenRows - 1)) mod spaceBetweenRows) = 0) or
+       (floor((pycor + max-pycor) mod spaceBetweenColumns) = 0)]
+  ]
+  ask road [ set pcolor grey ]
+
+end
+
+to setup-cars
+  set shape "car"
+  set size 1.5
+  set color blue
+  move-to one-of road
+
+  set movingToStation false
+  set maxCapacity 100
+  set currentFuel (100 - random 20)
+  set consumptionRate (3 - random 2)
+  set preference random 2
+  set fuelThreshold 33
+  set surroundingGasStations []
+  set target-station nobody
+end
+
+to setup-gasstations
+  set shape "house"
+  set size 2
+  move-to one-of road with [abs pxcor < floor (world-width / 2) and abs pycor < floor (world-height / 2)]
+
+  set demand 0
+  set earnings 0
+  set label precision price 2
+end
+
 to go
   ask cars [
-    move
     set currentFuel currentFuel - consumptionRate
-    if currentFuel <= fuelThreshold [
-      search
-      decide
-    ]
-    death
+    repeat 3 [move]
   ]
 
   ifelse ticks = 0 or ticks mod 24 = 0 [
@@ -80,41 +129,30 @@ to go
 end
 
 to move  ; turtle procedure
-  rt random 50
-  lt random 50
-  fd 1
-end
+  let movingOptions neighbors4 with [pcolor = 5]
 
-;; Initialize the global variables to appropriate values
-to setup-globals
-  set height 300
-  set width 300
-  set oilPrice 1.35
-end
+  if movingToStation = false [
+    ifelse count movingOptions = 4 [
+      move-to one-of movingOptions
+    ][
+      ifelse [pxcor] of self = floor (world-width / 2) or [pycor] of self = floor (world-height / 2) [
+        move-to one-of movingOptions with [pxcor < [pxcor] of myself or pycor < [pycor] of myself ]
+      ][
+        let moveTo one-of movingOptions with [pxcor > [pxcor] of myself or pycor > [pycor] of myself ]
+        ifelse moveTo = nobody [
+          move-to one-of movingOptions
+        ][
+          move-to moveTo
+        ]
+      ]
+    ]
+  ]
 
-to setup-gasstations
-  set shape "house"
-  set size 2
-  setxy random-xcor random-ycor
-
-  set demand 0
-  set earnings 0
-  set label precision price 2
-end
-
-to setup-cars
-  set shape "car"
-  set size 1.5
-  set color blue
-  setxy random-xcor random-ycor
-
-  set movingToStation false
-  set maxCapacity 100
-  set currentFuel (100 - random 20)
-  set consumptionRate (3 - random 2)
-  set preference random 2
-  set fuelThreshold 25
-  set surroundingGasStations []
+  if currentFuel <= fuelThreshold [
+    search
+    decide
+  ]
+  death
 end
 
 to display-labels
@@ -122,8 +160,11 @@ to display-labels
 end
 
 to setDailyPrice
-  set oilPrice (oilPrice + random-float 0.1 - random-float 0.1)
-  let leadingPrice oilPrice + random-float 0.1
+
+  if oilPrice > 1 and oilPrice < 1.6 [ set oilPrice (oilPrice + random-float 0.1 - random-float 0.1) ]
+  if oilPrice >= 1.6 [ set oilPrice oilPrice - random 0.1 ]
+  if oilPrice <= 1 [ set oilPrice oilPrice + random 0.1 ]
+  let leadingPrice oilPrice + abs (random-float 0.1 - random-float 0.06)
   ask gasstations [
     ifelse brand = 0 [
       set price leadingPrice
@@ -133,8 +174,11 @@ to setDailyPrice
         set price leadingPrice
       ]
     ]
+    set visited 0
+    set demand 0
     set label precision price 2
   ]
+
 end
 
 to setHourlyPrice
@@ -150,7 +194,7 @@ to setHourlyPrice
         set price [price] of cheapestGasStation
       ]
     ][
-      if price + tmpRandom < oilPrice + 0.25 [
+      if price + tmpRandom < oilPrice [
         set price price + tmpRandom
       ]
     ]
@@ -160,16 +204,16 @@ to setHourlyPrice
 end
 
 to search
-  set movingToStation true
   set surroundingGasStations (gasstations in-radius 15)
 end
 
 to decide
   let distanceMatrix []
   let priceMatrix []
-  let target-station nobody
+  let tx 0
+  let ty 0
 
-  if any? surroundingGasStations [
+  if any? surroundingGasStations and target-station = nobody [
     ask surroundingGasStations [
       set distanceMatrix lput (distance myself) distanceMatrix
       set priceMatrix lput price priceMatrix
@@ -191,18 +235,21 @@ to decide
   ]
   if target-station != nobody  [
     face target-station
-    ifelse distance target-station < 1
-      [
-        move-to target-station
-        set movingToStation false
-        ask target-station [
-          set earnings earnings + ([maxCapacity] of myself - [currentFuel] of myself) * (price - oilPrice)
-          set visited visited + 1
-          set demand visited / ticks
-        ]
-        set currentFuel maxCapacity
+    set movingToStation true
+    set tx [pxcor] of target-station
+    set ty [pycor] of target-station
+    ifelse distance target-station < 1 [
+      move-to target-station
+      ask target-station [
+        set earnings earnings + ([maxCapacity] of myself - [currentFuel] of myself) * (price - oilPrice)
+        set visited visited + 1
+        set demand visited / ticks
+      ]
+      set currentFuel maxCapacity
+      set movingToStation false
+      set target-station nobody
     ][
-        fd 1
+      move-to min-one-of neighbors4 with [pcolor = 5] [distancexy tx ty]
     ]
   ]
 
@@ -210,17 +257,18 @@ to decide
 end
 
 to death
+
   if currentFuel < 0 [ die ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-855
+727
 10
-1292
-448
+1212
+496
 -1
 -1
-13.0
+14.463415
 1
 10
 1
@@ -293,8 +341,8 @@ SLIDER
 number-of-cars
 number-of-cars
 5
-20
-15.0
+50
+25.0
 1
 1
 NIL
@@ -748,6 +796,26 @@ NetLogo 6.0.3
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="experiment" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="1000"/>
+    <metric>count cars</metric>
+    <metric>mean [price] of gasstations</metric>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="10"/>
+      <value value="20"/>
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="following-gas-stations">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="leading-gas-stations">
+      <value value="2"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
