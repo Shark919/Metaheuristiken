@@ -3,7 +3,6 @@ globals
 [
   oilPrice             ;; oil price
   road
-  intersection
   numberOfRows
   numberOfColumns
   spaceBetweenRows
@@ -35,12 +34,6 @@ gasstations-own
   earnings
 ]
 
-patches-own
-[
-  isIntersection
-  row
-  column
-]
 ;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup Procedures ;;
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -83,24 +76,14 @@ end
 to setup-streets
   ask patches
   [
-    set isIntersection false
-    set row -1
-    set column -1
     set pcolor brown
 
     set road patches with
        [(floor((pxcor + max-pxcor - floor(spaceBetweenRows - 1)) mod spaceBetweenRows) = 0) or
        (floor((pycor + max-pycor) mod spaceBetweenColumns) = 0)]
-    set intersection road with
-       [(floor((pxcor + max-pxcor - floor(spaceBetweenRows - 1)) mod spaceBetweenRows) = 0) and
-       (floor((pycor + max-pycor) mod spaceBetweenColumns) = 0)]
   ]
   ask road [ set pcolor grey ]
-  ask intersection [
-    set isIntersection true
-    set row floor((pycor + max-pycor) / spaceBetweenColumns)
-    set column floor((pxcor + max-pxcor) / spaceBetweenRows)
-  ]
+
 end
 
 to setup-cars
