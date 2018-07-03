@@ -97,7 +97,7 @@ to setup-cars
   set currentFuel (100 - random 20)
   set consumptionRate (3 - random 2)
   set preference random 2
-  set fuelThreshold 25
+  set fuelThreshold 33
   set surroundingGasStations []
   set target-station nobody
 end
@@ -105,7 +105,7 @@ end
 to setup-gasstations
   set shape "house"
   set size 2
-  move-to one-of road
+  move-to one-of road with [abs pxcor < floor (world-width / 2) and abs pycor < floor (world-height / 2)]
 
   set demand 0
   set earnings 0
@@ -160,12 +160,10 @@ to display-labels
 end
 
 to setDailyPrice
-  if oilPrice > 1.6 [ set oilPrice oilPrice - random 0.1 ]
-  ifelse oilPrice < 1 [
-    set oilPrice oilPrice + random 0.1
-  ][
-    set oilPrice (oilPrice + random-float 0.1 - random-float 0.1)
-  ]
+
+  if oilPrice >= 1.6 [ set oilPrice oilPrice - random 0.1 ]
+  if oilPrice <= 1 [ set oilPrice oilPrice + random 0.1 ]
+  if oilPrice > 1 and oilPrice < 1.6 [ set oilPrice (oilPrice + random-float 0.1 - random-float 0.1) ]
   let leadingPrice oilPrice + random-float 0.1
   ask gasstations [
     ifelse brand = 0 [
@@ -176,8 +174,11 @@ to setDailyPrice
         set price leadingPrice
       ]
     ]
+    set visited 0
+    set demand 0
     set label precision price 2
   ]
+
 end
 
 to setHourlyPrice
@@ -256,6 +257,7 @@ to decide
 end
 
 to death
+
   if currentFuel < 0 [ die ]
 end
 @#$#@#$#@
@@ -339,8 +341,8 @@ SLIDER
 number-of-cars
 number-of-cars
 5
-20
-20.0
+50
+50.0
 1
 1
 NIL
@@ -355,7 +357,7 @@ following-gas-stations
 following-gas-stations
 2
 10
-3.0
+5.0
 1
 1
 NIL
@@ -794,6 +796,26 @@ NetLogo 6.0.3
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="experiment" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="1000"/>
+    <metric>count cars</metric>
+    <metric>mean [price] of gasstations</metric>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="10"/>
+      <value value="20"/>
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="following-gas-stations">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="leading-gas-stations">
+      <value value="2"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
