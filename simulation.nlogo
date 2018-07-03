@@ -160,7 +160,12 @@ to display-labels
 end
 
 to setDailyPrice
-  set oilPrice (oilPrice + random-float 0.1 - random-float 0.1)
+  if oilPrice > 1.6 [ set oilPrice oilPrice - random 0.1 ]
+  ifelse oilPrice < 1 [
+    set oilPrice oilPrice + random 0.1
+  ][
+    set oilPrice (oilPrice + random-float 0.1 - random-float 0.1)
+  ]
   let leadingPrice oilPrice + random-float 0.1
   ask gasstations [
     ifelse brand = 0 [
@@ -335,7 +340,7 @@ number-of-cars
 number-of-cars
 5
 20
-15.0
+20.0
 1
 1
 NIL
