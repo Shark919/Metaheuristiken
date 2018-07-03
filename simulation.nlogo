@@ -96,7 +96,7 @@ to setup-cars
   set movingToStation false
   set maxCapacity 100
   set currentFuel (100 - random 20)
-  set consumptionRate (3 - random 2)
+  set consumptionRate (2 - random 1)
   set preference random 2
   set fuelThreshold 35
   set surroundingGasStations []
@@ -219,11 +219,7 @@ to decide
       set distanceMatrix lput (distance myself) distanceMatrix
       set priceMatrix lput price priceMatrix
     ]
-    let target-station-minDistance min-one-of surroundingGasStations [distance myself]
-
-    if target-station = nobody [
-      set target-station target-station-minDistance
-    ]
+    set target-station min-one-of surroundingGasStations [distance myself]
   ]
 
   if target-station != nobody  [
@@ -240,7 +236,7 @@ to decide
         if subjectiveValue < -0.05 [
           set refuelAtOtherStation true
         ]
-        ;; biased - if i prefer highprice gasstations i will not chose cheap ones at all
+        ;; biased - if i prefer highprice gasstations i will not choose cheap ones at all
         ;; if i prefer cheap stations, i will only refuel if the price is low, compared to my reference point
         ;; preference 0 = high price, preference 1 = cheap price
         ;; random aspect because sometimes people refuel at the stations they usually dont prefer
@@ -264,7 +260,7 @@ to decide
         refuel
       ]
     ][
-      move-to min-one-of neighbors4 with [pcolor = 5] [distancexy tx ty]
+      move-to min-one-of neighbors with [pcolor = 5] [distancexy tx ty]
     ]
   ]
 end
@@ -298,7 +294,6 @@ to refuelPartly
 end
 
 to death
-
   if currentFuel < 0 [ die ]
 end
 @#$#@#$#@
