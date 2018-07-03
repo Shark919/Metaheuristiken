@@ -257,6 +257,7 @@ to decide
           ]
         ]
       ]
+
       ifelse refuelAtOtherStation = true [
         refuelPartly
         set target-station max-one-of (min-n-of 2 surroundingGasStations [distance myself]) [distance myself]
