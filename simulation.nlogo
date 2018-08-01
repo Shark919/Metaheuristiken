@@ -241,7 +241,7 @@ to setHourlyPrice
 
   let tmpRandom random-float 0.02
   ask gasstations [
-    let cheapestGasStation min-one-of gasstations in-radius 25 [price]
+    let cheapestGasStation min-one-of gasstations in-radius 22 [price]
     if [price] of cheapestGasStation != price [
       ifelse demand < (mean [demand] of gasstations) [
         ifelse [price] of cheapestGasStation - tmpRandom > oilPrice [
@@ -259,7 +259,7 @@ to setHourlyPrice
 end
 
 to search
-  set surroundingGasStations (gasstations in-radius 15)
+  set surroundingGasStations (gasstations in-radius 20)
 end
 
 to decide
