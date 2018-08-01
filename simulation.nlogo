@@ -414,10 +414,10 @@ PLOT
 1248
 187
 Demand of gasstations
-NIL
-NIL
+Ticks
+Demand
 0.0
-6.0
+5.0
 0.0
 0.3
 true
@@ -432,8 +432,8 @@ PLOT
 1604
 191
 Fuel of cars
-NIL
-NIL
+Car
+Fuel
 0.0
 10.0
 0.0
@@ -450,17 +450,17 @@ PLOT
 1247
 341
 Earnings of gasstations
-NIL
-NIL
+Ticks
+Earnings
 0.0
-10.0
+5.0
 0.0
-10.0
+1.0
 true
 false
 "" ""
 PENS
-"default" 1.0 1 -16777216 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot earnings ] ]"
+"pen-0" 1.0 1 -16777216 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot demand ] ]"
 
 PLOT
 1349
@@ -468,12 +468,12 @@ PLOT
 1605
 343
 Marge of gasstation
-NIL
-NIL
+Ticks
+Marge
 0.0
-10.0
+5.0
 0.0
-0.3
+0.1
 false
 false
 "" ""
@@ -512,8 +512,8 @@ Ticks
 Price
 0.0
 10.0
-1.0
-1.7
+1.3
+1.5
 true
 true
 "" ""
