@@ -45,7 +45,10 @@ gasstations-own
 to setup
   clear-all
   setup-globals
-  setup-streets
+  if roadMap[
+    setup-streets
+  ]
+
   let i 0
   create-cars number-of-cars
   [
@@ -56,31 +59,31 @@ to setup
     ask gasstations [
 
     if i = 0 [
-      setxy 34 39
+      setxy -17 -6
       set name "Total"
       set color red
       set brand 0
     ]
     if i = 1 [
-      setxy -34 -37
+      setxy 17 7
       set name "Aral"
       set color red
       set brand 0
     ]
     if i = 2 [
-      setxy 34 -37
-      set name "Jet"
+      setxy -18 19
+      set name "Cosy Wash"
       set color green
       set brand 1
     ]
     if i = 3 [
-      setxy 0 1
+      setxy 0 7
       set name "Star"
       set color green
       set brand 1
     ]
     if i = 4 [
-      setxy -34 39
+      setxy 17 -19
       set name "BFT"
       set color green
       set brand 1
@@ -109,8 +112,8 @@ to setup-streets
     set pcolor brown
 
     set road patches with
-       [(floor((pxcor + max-pxcor - floor(spaceBetweenRows - 1)) mod spaceBetweenRows) = 0) or
-       (floor((pycor + max-pycor) mod spaceBetweenColumns) = 0)]
+       [pxcor != max-pxcor and ((floor((pxcor + max-pxcor - floor(spaceBetweenRows - 1)) mod spaceBetweenRows) = 0)) or
+       (pycor != min-pycor and (floor((pycor + max-pycor) mod spaceBetweenColumns) = 0))]
   ]
   ask road [ set pcolor grey ]
 
@@ -120,14 +123,19 @@ to setup-cars
   set shape "car"
   set size 1.5
   set color blue
-  move-to one-of road
+  ifelse roadMap [
+    move-to one-of road
+  ][
+    setxy random-xcor random-ycor
+  ]
+
 
   set movingToStation false
   set maxCapacity 100
   set currentFuel (100 - random 20)
-  set consumptionRate (2 - random 1)
+  set consumptionRate (4 - random 3)
   set preference random 2
-  set fuelThreshold 35
+  set fuelThreshold 30
   set surroundingGasStations []
   set lastKnownPrice oilPrice
   set target-station nobody
@@ -139,7 +147,6 @@ to setup-gasstations
   set shape "house"
   set size 2
   set price oilPrice
-  ;; move-to one-of road with [abs pxcor < floor (world-width / 2) and abs pycor < floor (world-height / 2)]
   set demand 0
   set earnings 0
   let priceDecimals (precision price 2)
@@ -167,25 +174,36 @@ to go
 end
 
 to move  ; turtle procedure
-  let movingOptions neighbors4 with [pcolor = 5]
+  ifelse roadMap[
 
-  if movingToStation = false [
-    ifelse count movingOptions = 4 [
-      move-to one-of movingOptions
-    ][
-      ifelse [pxcor] of self = floor (world-width / 2) or [pycor] of self = floor (world-height / 2) [
-        move-to one-of movingOptions with [pxcor < [pxcor] of myself or pycor < [pycor] of myself ]
+    let movingOptions neighbors4 with [pcolor = 5]
+
+    if movingToStation = false [
+      ifelse not any? movingOptions [
+        face min-one-of road [distance myself]
+        forward 1
       ][
-        let moveTo one-of movingOptions with [pxcor > [pxcor] of myself or pycor > [pycor] of myself ]
-        ifelse moveTo = nobody [
+        ifelse count movingOptions = 4 [
           move-to one-of movingOptions
         ][
-          move-to moveTo
+          ifelse [pxcor] of self = floor (world-width / 2) or [pycor] of self = floor (world-height / 2) [
+            move-to one-of movingOptions with [pxcor < [pxcor] of myself or pycor < [pycor] of myself ]
+          ][
+            let moveTo one-of movingOptions with [pxcor > [pxcor] of myself or pycor > [pycor] of myself ]
+            ifelse moveTo = nobody [
+              move-to one-of movingOptions
+            ][
+              move-to moveTo
+            ]
+          ]
         ]
       ]
     ]
+  ][
+    rt random 50
+    lt random 50
+    fd 1
   ]
-
   if currentFuel <= fuelThreshold [
     search
     decide
@@ -199,10 +217,10 @@ end
 
 to setDailyPrice
 
-  if oilPrice > 1 and oilPrice < 1.6 [ set oilPrice (oilPrice + random-float 0.1 - random-float 0.1) ]
-  if oilPrice >= 1.6 [ set oilPrice oilPrice - random 0.1 ]
-  if oilPrice <= 1 [ set oilPrice oilPrice + random 0.1 ]
-  let leadingPrice oilPrice + abs (random-float 0.1 - random-float 0.06)
+  if oilPrice > 1.01 and oilPrice < 1.59 [ set oilPrice (oilPrice + random-float 0.1 - random-float 0.1) ]
+  if oilPrice >= 1.59 [ set oilPrice 1.45 ]
+  if oilPrice <= 1.01 [ set oilPrice 1.15 ]
+  let leadingPrice oilPrice + random-float 0.1
   ask gasstations [
     ifelse brand = 0 [
       set price leadingPrice
@@ -221,18 +239,17 @@ end
 
 to setHourlyPrice
 
-  let cheapestGasStation min-one-of gasstations [price]
   let tmpRandom random-float 0.02
   ask gasstations [
-
-    ifelse demand <= (mean [demand] of gasstations) [
-      ifelse [price] of cheapestGasStation - tmpRandom > oilPrice [
-        set price [price] of cheapestGasStation - tmpRandom
+    let cheapestGasStation min-one-of gasstations in-radius 22 [price]
+    if [price] of cheapestGasStation != price [
+      ifelse demand < (mean [demand] of gasstations) [
+        ifelse [price] of cheapestGasStation - tmpRandom > oilPrice [
+          set price [price] of cheapestGasStation - tmpRandom
+        ][
+          set price [price] of cheapestGasStation
+        ]
       ][
-        set price [price] of cheapestGasStation
-      ]
-    ][
-      if price + tmpRandom < oilPrice [
         set price price + tmpRandom
       ]
     ]
@@ -242,21 +259,17 @@ to setHourlyPrice
 end
 
 to search
-  set surroundingGasStations (gasstations in-radius 25)
+  set surroundingGasStations (gasstations in-radius 20)
 end
 
 to decide
-  let tx 0
-  let ty 0
-
 
   if any? surroundingGasStations and target-station = nobody and movingToStation = false [
     let bestStationValue 999999999
     let takeSecondBest false
     let chosenStation nobody
-
+    let maxRange ([currentFuel] of self / [consumptionRate] of self)
     ask surroundingGasStations [
-      let maxRange ([currentFuel] of myself / [consumptionRate] of myself)
       let stationValue ([priceSensitivity] of myself * price) + ([distanceSensitivity] of myself * ([distance myself] of self / maxRange))
       if stationValue < bestStationValue [
         set bestStationValue stationValue
@@ -281,43 +294,41 @@ to decide
       ]
     ]
     set target-station chosenStation
-    ;set target-station min-one-of surroundingGasStations [distance myself]
   ]
 
-
   if target-station != nobody  [
-    face target-station
-
     set movingToStation true
-    set tx [pxcor] of target-station
-    set ty [pycor] of target-station
+
+    face target-station
     ifelse distance target-station < 1 [
       move-to target-station
       refuel
     ][
       forward 1
-      ;move-to min-one-of neighbors with [pcolor = 5] [distancexy tx ty]
     ]
   ]
 end
 
 to refuel
-  move-to target-station
   set movingToStation false
   let stationPrice 0
+  let totalVisited sum [visited] of gasstations
   ask target-station [
     set earnings earnings + ([maxCapacity] of myself - [currentFuel] of myself) * (price - oilPrice)
     set visited visited + 1
-    set demand visited / ticks
+    if totalVisited != 0 [
+      set demand visited / totalVisited
+    ]
     set stationPrice price
   ]
   set lastKnownPrice stationPrice
   set currentFuel maxCapacity
+  set target-station nobody
 end
 
 to death
   if currentFuel < 1 [
-    set currentFuel 100
+    refuel
   ]
 end
 @#$#@#$#@
@@ -402,7 +413,7 @@ number-of-cars
 number-of-cars
 5
 50
-48.0
+50.0
 1
 1
 NIL
@@ -450,7 +461,7 @@ PLOT
 1247
 341
 Earnings of gasstations
-Ticks
+Gasstation
 Earnings
 0.0
 5.0
@@ -468,17 +479,17 @@ PLOT
 1605
 343
 Marge of gasstation
-Ticks
+Gasstation
 Marge
 0.0
 5.0
 0.0
 0.1
-false
+true
 false
 "" ""
 PENS
-"default" 1.0 1 -11085214 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot (price - oilPrice) ] ]"
+"" 1.0 1 -13345367 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot price - oilPrice ] ]"
 
 PLOT
 745
@@ -498,7 +509,7 @@ true
 PENS
 "Aral" 1.0 0 -14070903 true "" "ask gasstations [\n  if name = \"Aral\" [\n    plot earnings\n  ]\n]\n"
 "Total" 1.0 0 -2674135 true "" "ask gasstations [\n  if name = \"Total\" [\n    plot earnings\n  ]\n]\n"
-"Jet" 1.0 0 -1184463 true "" "ask gasstations [\n  if name = \"Jet\" [\n    plot earnings\n  ]\n]\n"
+"Cosy Wash" 1.0 0 -1184463 true "" "ask gasstations [\n  if name = \"Cosy Wash\" [\n    plot earnings\n  ]\n]\n"
 "BFT" 1.0 0 -15040220 true "" "ask gasstations [\n  if name = \"BFT\" [\n    plot earnings\n  ]\n]\n"
 "Star" 1.0 0 -3844592 true "" "ask gasstations [\n  if name = \"Star\" [\n    plot earnings\n  ]\n]\n"
 
@@ -520,9 +531,20 @@ true
 PENS
 "Aral" 1.0 0 -13345367 true "" "ask gasstations [\n  if name = \"Aral\" [\n    plot price\n  ]\n]\n"
 "Total" 1.0 0 -2674135 true "" "ask gasstations [\n  if name = \"Total\" [\n    plot price\n  ]\n]"
-"Jet" 1.0 0 -1184463 true "" "ask gasstations [\n  if name = \"Jet\" [\n    plot price\n  ]\n]\n"
+"Cosy Wash" 1.0 0 -1184463 true "" "ask gasstations [\n  if name = \"Cosy Wash\" [\n    plot price\n  ]\n]\n"
 "BFT" 1.0 0 -12087248 true "" "ask gasstations [\n  if name = \"BFT\" [\n    plot price\n  ]\n]\n"
 "Star" 1.0 0 -3844592 true "" "ask gasstations [\n  if name = \"Star\" [\n    plot price\n  ]\n]\n"
+
+SWITCH
+768
+172
+879
+205
+roadMap
+roadMap
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
