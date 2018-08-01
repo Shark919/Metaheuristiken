@@ -1,7 +1,7 @@
 extensions [ rnd ]
 globals
 [
-  oilPrice             ;; oil price
+  oilPrice
   road
   numberOfRows
   numberOfColumns
@@ -35,6 +35,7 @@ gasstations-own
   demand
   visited
   earnings
+  name
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -50,20 +51,46 @@ to setup
   [
     setup-cars
   ]
-  create-gasstations (leading-gas-stations + following-gas-stations)
+  create-gasstations 5
   [
-    setup-gasstations
-  ]
-  ask gasstations [
-    ifelse i < leading-gas-stations
-    [ set color red
+    ask gasstations [
+
+    if i = 0 [
+      setxy 34 39
+      set name "Total"
+      set color red
       set brand 0
-    ][
+    ]
+    if i = 1 [
+      setxy -34 -37
+      set name "Aral"
+      set color red
+      set brand 0
+    ]
+    if i = 2 [
+      setxy 34 -37
+      set name "Jet"
       set color green
       set brand 1
     ]
+    if i = 3 [
+      setxy 0 1
+      set name "Star"
+      set color green
+      set brand 1
+    ]
+    if i = 4 [
+      setxy -34 39
+      set name "BFT"
+      set color green
+      set brand 1
+    ]
+
     set i i + 1
   ]
+    setup-gasstations
+  ]
+
   reset-ticks
 end
 
@@ -111,10 +138,12 @@ end
 to setup-gasstations
   set shape "house"
   set size 2
-  move-to one-of road with [abs pxcor < floor (world-width / 2) and abs pycor < floor (world-height / 2)]
+  set price oilPrice
+  ;; move-to one-of road with [abs pxcor < floor (world-width / 2) and abs pycor < floor (world-height / 2)]
   set demand 0
   set earnings 0
-  set label precision price 2
+  let priceDecimals (precision price 2)
+  set label (word name "," precision price 2)
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -185,7 +214,7 @@ to setDailyPrice
     ]
     set visited 0
     set demand 0
-    set label precision price 2
+    set label (word name "," precision price 2)
   ]
 
 end
@@ -207,7 +236,7 @@ to setHourlyPrice
         set price price + tmpRandom
       ]
     ]
-    set label precision price 2
+    set label (word name "," precision price 2)
   ]
 
 end
@@ -217,12 +246,11 @@ to search
 end
 
 to decide
-
   let tx 0
   let ty 0
 
-  if any? surroundingGasStations and target-station = nobody [
 
+  if any? surroundingGasStations and target-station = nobody and movingToStation = false [
     let bestStationValue 999999999
     let takeSecondBest false
     let chosenStation nobody
@@ -250,16 +278,12 @@ to decide
             set chosenStation self
           ]
         ]
-
       ]
-
     ]
-
     set target-station chosenStation
-
-
     ;set target-station min-one-of surroundingGasStations [distance myself]
   ]
+
 
   if target-station != nobody  [
     face target-station
@@ -271,7 +295,8 @@ to decide
       move-to target-station
       refuel
     ][
-      move-to min-one-of neighbors with [pcolor = 5] [distancexy tx ty]
+      forward 1
+      ;move-to min-one-of neighbors with [pcolor = 5] [distancexy tx ty]
     ]
   ]
 end
@@ -291,17 +316,19 @@ to refuel
 end
 
 to death
-  if currentFuel < 0 [ die ]
+  if currentFuel < 1 [
+    set currentFuel 100
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-727
 10
-1472
-756
+10
+739
+740
 -1
 -1
-14.463415
+14.14
 1
 12
 1
@@ -322,10 +349,10 @@ ticks
 60.0
 
 BUTTON
-16
-18
-80
-51
+762
+12
+846
+49
 Setup
 setup\n
 NIL
@@ -339,10 +366,10 @@ NIL
 1
 
 BUTTON
-100
-19
-163
-52
+853
+12
+932
+49
 Go
 go
 T
@@ -356,51 +383,36 @@ NIL
 1
 
 MONITOR
-17
-69
+766
+110
+904
 155
-114
 Oil Price
-oilPrice
+precision oilPrice 3
 17
 1
 11
 
 SLIDER
-17
-134
-189
-167
+765
+64
+937
+97
 number-of-cars
 number-of-cars
 5
 50
-25.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-214
-180
-409
-213
-following-gas-stations
-following-gas-stations
-2
-10
-3.0
+48.0
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-19
-277
-280
-450
+987
+14
+1248
+187
 Demand of gasstations
 NIL
 NIL
@@ -415,10 +427,10 @@ PENS
 "pen-0" 1.0 1 -13840069 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot demand ] ]"
 
 PLOT
-381
-273
-636
-454
+1349
+10
+1604
+191
 Fuel of cars
 NIL
 NIL
@@ -432,26 +444,11 @@ false
 PENS
 "default" 1.0 1 -16777216 true "" "plot-pen-reset\nforeach sort cars [ [t] -> ask t [ plot currentFuel ] ]"
 
-SLIDER
-17
-180
-201
-213
-leading-gas-stations
-leading-gas-stations
-0
-5
-2.0
-1
-1
-NIL
-HORIZONTAL
-
 PLOT
-19
-454
-279
-604
+987
+191
+1247
+341
 Earnings of gasstations
 NIL
 NIL
@@ -466,10 +463,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot earnings ] ]"
 
 PLOT
-381
-456
-637
-606
+1349
+193
+1605
+343
 Marge of gasstation
 NIL
 NIL
@@ -484,24 +481,48 @@ PENS
 "default" 1.0 1 -11085214 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot (price - oilPrice) ] ]"
 
 PLOT
-187
-671
-387
-821
+745
+345
+1363
+584
 Earning over Time
-NIL
-NIL
+Ticks
+Earnings
 0.0
 10.0
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot earnings ] ]"
-"pen-1" 1.0 0 -7500403 true "" ""
-"pen-2" 1.0 0 -2674135 true "" ""
+"Aral" 1.0 0 -14070903 true "" "ask gasstations [\n  if name = \"Aral\" [\n    plot earnings\n  ]\n]\n"
+"Total" 1.0 0 -2674135 true "" "ask gasstations [\n  if name = \"Total\" [\n    plot earnings\n  ]\n]\n"
+"Jet" 1.0 0 -1184463 true "" "ask gasstations [\n  if name = \"Jet\" [\n    plot earnings\n  ]\n]\n"
+"BFT" 1.0 0 -15040220 true "" "ask gasstations [\n  if name = \"BFT\" [\n    plot earnings\n  ]\n]\n"
+"Star" 1.0 0 -3844592 true "" "ask gasstations [\n  if name = \"Star\" [\n    plot earnings\n  ]\n]\n"
+
+PLOT
+746
+590
+1364
+820
+Prices over Time
+Ticks
+Price
+0.0
+10.0
+1.0
+1.7
+true
+true
+"" ""
+PENS
+"Aral" 1.0 0 -13345367 true "" "ask gasstations [\n  if name = \"Aral\" [\n    plot price\n  ]\n]\n"
+"Total" 1.0 0 -2674135 true "" "ask gasstations [\n  if name = \"Total\" [\n    plot price\n  ]\n]"
+"Jet" 1.0 0 -1184463 true "" "ask gasstations [\n  if name = \"Jet\" [\n    plot price\n  ]\n]\n"
+"BFT" 1.0 0 -12087248 true "" "ask gasstations [\n  if name = \"BFT\" [\n    plot price\n  ]\n]\n"
+"Star" 1.0 0 -3844592 true "" "ask gasstations [\n  if name = \"Star\" [\n    plot price\n  ]\n]\n"
 
 @#$#@#$#@
 ## WHAT IS IT?
