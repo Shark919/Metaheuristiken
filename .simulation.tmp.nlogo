@@ -15,9 +15,9 @@ breed[gasstations gasstation]
 
 cars-own
 [
-  maxCapacity
-  currentFuel
-  consumptionRate
+  maxCapacity     ;;
+  currentFuel     ;;
+  consumptionRate ;
   preference
   fuelThreshold
   movingToStation
@@ -116,10 +116,6 @@ to setup-gasstations
   set earnings 0
   set label precision price 2
 end
-
-;;;;;;;;;;;;;;;;;;;;;;;
-;; Action Procedures ;;
-;;;;;;;;;;;;;;;;;;;;;;;
 
 to go
   ask cars [
