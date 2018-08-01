@@ -402,7 +402,7 @@ number-of-cars
 number-of-cars
 5
 50
-48.0
+20.0
 1
 1
 NIL
@@ -457,14 +457,10 @@ Earnings
 0.0
 1.0
 true
-true
+false
 "" ""
 PENS
-"Aral" 1.0 1 -13345367 true "" "plot-pen-reset\nask gasstations [\n  if name = \"Aral\" [\n    plot earnings\n  ]\n]\n\n;foreach sort gasstations [ [t] -> ask t [ plot earnings ] ]"
-"Total" 1.0 1 -2674135 true "set-plot-x-range 1 2" "plot-pen-reset\nask gasstations [\n  if name = \"Total\" [\n    plot earnings\n  ]\n]"
-"Jet" 1.0 1 -1184463 true "" "plot-pen-reset\nask gasstations [\n  if name = \"Jet\" [\n    plot earnings\n  ]\n]"
-"BFT" 1.0 1 -12087248 true "" "plot-pen-reset\nask gasstations [\n  if name = \"BFT\" [\n    plot earnings\n  ]\n]"
-"Star" 1.0 1 -3844592 true "" "plot-pen-reset\nask gasstations [\n  if name = \"Star\" [\n    plot earnings\n  ]\n]"
+"pen-0" 1.0 1 -16777216 true "" "plot-pen-reset\nforeach sort gasstations [ [t] -> ask t [ plot demand ] ]"
 
 PLOT
 1349
@@ -880,17 +876,15 @@ NetLogo 6.0.3
     <go>go</go>
     <timeLimit steps="1000"/>
     <metric>count cars</metric>
-    <metric>mean [price] of gasstations</metric>
+    <metric>mean [price] of gasstations with [name = "Aral"]</metric>
+    <metric>mean [price] of gasstations with [name = "Total"]</metric>
+    <metric>mean [price] of gasstations with [name = "Jet"]</metric>
+    <metric>mean [price] of gasstations with [name = "BFT"]</metric>
+    <metric>mean [price] of gasstations with [name = "Star"]</metric>
     <enumeratedValueSet variable="number-of-cars">
       <value value="10"/>
       <value value="20"/>
       <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="following-gas-stations">
-      <value value="3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="leading-gas-stations">
-      <value value="2"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
