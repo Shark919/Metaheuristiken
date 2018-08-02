@@ -217,7 +217,7 @@ end
 
 to setDailyPrice
 
-  if oilPrice > 1.01 and oilPrice < 1.59 [ set oilPrice (oilPrice + random-float 0.05 - random-float 0.05) ]
+  if oilPrice > 1.01 and oilPrice < 1.59 [ set oilPrice (oilPrice + random-float 0. - random-float 0.1) ]
   if oilPrice >= 1.59 [ set oilPrice 1.45 ]
   if oilPrice <= 1.01 [ set oilPrice 1.15 ]
   let leadingPrice oilPrice + random-float 0.1
