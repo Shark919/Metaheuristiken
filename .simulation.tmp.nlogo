@@ -269,11 +269,11 @@ to decide
     let chosenStation nobody
     let maxRange ([currentFuel] of self / [consumptionRate] of self)
     ask surroundingGasStations [
-      let stationValue 0
+
       ifelse extendedDecision = true [
-        set stationValue [distance myself] of self
+        let stationValue [distance myself] of self
       ][
-        set stationValue ([priceSensitivity] of myself * price) + ([distanceSensitivity] of myself * ([distance myself] of self / maxRange))
+        let stationValue ([priceSensitivity] of myself * price) + ([distanceSensitivity] of myself * ([distance myself] of self / maxRange))
       ]
 
       if stationValue < bestStationValue [
@@ -419,7 +419,7 @@ number-of-cars
 number-of-cars
 10
 100
-22.0
+100.0
 1
 1
 NIL
@@ -593,7 +593,7 @@ SWITCH
 231
 extendedDecision
 extendedDecision
-0
+1
 1
 -1000
 
