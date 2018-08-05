@@ -129,7 +129,6 @@ to setup-cars
     setxy random-xcor random-ycor
   ]
 
-
   set movingToStation false
   set maxCapacity 100
   set currentFuel (100 - random 20)
@@ -217,10 +216,10 @@ end
 
 to setDailyPrice
 
-  if oilPrice > 1.01 and oilPrice < 1.59 [ set oilPrice (oilPrice + random-float 0.05 - random-float 0.05) ]
+  if oilPrice > 1.01 and oilPrice < 1.59 [ set oilPrice (oilPrice + random-float 0.1 - random-float 0.1) ]
   if oilPrice >= 1.59 [ set oilPrice 1.45 ]
   if oilPrice <= 1.01 [ set oilPrice 1.15 ]
-  let leadingPrice oilPrice + random-float 0.1
+  let leadingPrice oilPrice + 0.1 - random-float 0.06
   ask gasstations [
     ifelse brand = 0 [
       set price leadingPrice
@@ -243,8 +242,8 @@ to setHourlyPrice
   ask gasstations [
     let cheapestGasStation min-one-of gasstations in-radius 22 [price]
     if [price] of cheapestGasStation != price [
-      ifelse demand < (mean [demand] of gasstations) [
-        ifelse [price] of cheapestGasStation - tmpRandom > oilPrice [
+      ifelse demand < (mean [demand] of gasstations in-radius 22) [
+        ifelse [price] of cheapestGasStation - tmpRandom > oilPrice + 0.1 [
           set price [price] of cheapestGasStation - tmpRandom
         ][
           set price [price] of cheapestGasStation
@@ -280,7 +279,7 @@ to decide
           ;; if i prefer cheap stations, i will only refuel if the price is low, compared to my reference point
           ;; preference 0 = high price, preference 1 = cheap price
           ;; random aspect because sometimes people refuel at the stations they usually dont prefer
-          let randomAspect random 100
+          let randomAspect loyalty
           ifelse (([preference] of myself) = 0 and brand = 1) or (([preference] of myself) = 1 and brand = 0) [
             ifelse randomAspect < 75 [
               set takeSecondBest true
@@ -313,6 +312,7 @@ to refuel
   set movingToStation false
   let stationPrice 0
   let totalVisited sum [visited] of gasstations
+  move-to target-station
   ask target-station [
     set earnings earnings + ([maxCapacity] of myself - [currentFuel] of myself) * (price - oilPrice)
     set visited visited + 1
@@ -394,10 +394,10 @@ NIL
 1
 
 MONITOR
-766
-110
-904
-155
+751
+237
+981
+282
 Oil Price
 precision oilPrice 3
 17
@@ -411,9 +411,9 @@ SLIDER
 97
 number-of-cars
 number-of-cars
-5
-50
-50.0
+10
+100
+100.0
 1
 1
 NIL
@@ -511,13 +511,13 @@ PENS
 "Total" 1.0 0 -2674135 true "" "ask gasstations [\n  if name = \"Total\" [\n    plot earnings\n  ]\n]\n"
 "Cosy Wash" 1.0 0 -1184463 true "" "ask gasstations [\n  if name = \"Cosy Wash\" [\n    plot earnings\n  ]\n]\n"
 "BFT" 1.0 0 -15040220 true "" "ask gasstations [\n  if name = \"BFT\" [\n    plot earnings\n  ]\n]\n"
-"Star" 1.0 0 -3844592 true "" "ask gasstations [\n  if name = \"Star\" [\n    plot earnings\n  ]\n]\n"
+"Star" 1.0 0 -7500403 true "" "ask gasstations [\n  if name = \"Star\" [\n    plot earnings\n  ]\n]\n"
 
 PLOT
-746
-590
-1364
-820
+745
+587
+1363
+817
 Prices over Time
 Ticks
 Price
@@ -533,18 +533,52 @@ PENS
 "Total" 1.0 0 -2674135 true "" "ask gasstations [\n  if name = \"Total\" [\n    plot price\n  ]\n]"
 "Cosy Wash" 1.0 0 -1184463 true "" "ask gasstations [\n  if name = \"Cosy Wash\" [\n    plot price\n  ]\n]\n"
 "BFT" 1.0 0 -12087248 true "" "ask gasstations [\n  if name = \"BFT\" [\n    plot price\n  ]\n]\n"
-"Star" 1.0 0 -3844592 true "" "ask gasstations [\n  if name = \"Star\" [\n    plot price\n  ]\n]\n"
+"Star" 1.0 0 -7500403 true "" "ask gasstations [\n  if name = \"Star\" [\n    plot price\n  ]\n]\n"
 
 SWITCH
-768
-172
-879
-205
+766
+153
+937
+186
 roadMap
 roadMap
 0
 1
 -1000
+
+PLOT
+10
+744
+739
+864
+Avg Prices over Time
+Ticks
+Price
+0.0
+10.0
+1.3
+1.7
+true
+true
+"" ""
+PENS
+"oilPrice" 1.0 0 -7500403 true "" "plot oilPrice"
+"avgPrice" 1.0 0 -2674135 true "" "plot mean [price] of gasstations"
+
+SLIDER
+765
+109
+937
+142
+loyalty
+loyalty
+0
+100
+75.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -893,23 +927,12 @@ NetLogo 6.0.3
 @#$#@#$#@
 @#$#@#$#@
 <experiments>
-  <experiment name="experiment" repetitions="2" runMetricsEveryStep="true">
+  <experiment name="experiment1" repetitions="30" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <timeLimit steps="1000"/>
-    <metric>count cars</metric>
-    <metric>mean [price] of gasstations</metric>
-    <enumeratedValueSet variable="number-of-cars">
-      <value value="10"/>
-      <value value="20"/>
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="following-gas-stations">
-      <value value="3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="leading-gas-stations">
-      <value value="2"/>
-    </enumeratedValueSet>
+    <timeLimit steps="240"/>
+    <metric>mean [(price - oilPrice)] of gasstations</metric>
+    <steppedValueSet variable="number-of-cars" first="25" step="25" last="100"/>
   </experiment>
 </experiments>
 @#$#@#$#@
