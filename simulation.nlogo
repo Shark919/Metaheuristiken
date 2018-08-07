@@ -324,9 +324,11 @@ to refuel
     set visited visited + 1
     if totalVisited != 0 [
       set demand visited / totalVisited
+      if demand > 1 [ set demand 0]
     ]
     set stationPrice price
   ]
+
   set lastKnownPrice stationPrice
   set currentFuel maxCapacity
   set target-station nobody
@@ -419,7 +421,7 @@ number-of-cars
 number-of-cars
 10
 100
-22.0
+50.0
 1
 1
 NIL
@@ -548,7 +550,7 @@ SWITCH
 186
 roadMap
 roadMap
-0
+1
 1
 -1000
 
@@ -587,13 +589,13 @@ NIL
 HORIZONTAL
 
 SWITCH
-773
-197
-923
-231
+766
+196
+938
+229
 extendedDecision
 extendedDecision
-0
+1
 1
 -1000
 
@@ -948,8 +950,38 @@ NetLogo 6.0.3
     <setup>setup</setup>
     <go>go</go>
     <timeLimit steps="240"/>
-    <metric>mean [(price - oilPrice)] of gasstations</metric>
+    <metric>mean [(price - oilPrice)] of gasstations with [brand = 0]</metric>
+    <metric>mean [(price - oilPrice)] of gasstations with [brand = 1]</metric>
     <steppedValueSet variable="number-of-cars" first="25" step="25" last="100"/>
+    <enumeratedValueSet variable="extendedDecision">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="loyalty">
+      <value value="75"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roadMap">
+      <value value="true"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="experiment2" repetitions="30" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="240"/>
+    <metric>mean [demand] of gasstations with [brand = 1]</metric>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="loyalty">
+      <value value="75"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="extendedDecision">
+      <value value="true"/>
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roadMap">
+      <value value="true"/>
+      <value value="false"/>
+    </enumeratedValueSet>
   </experiment>
 </experiments>
 @#$#@#$#@
