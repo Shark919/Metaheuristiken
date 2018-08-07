@@ -550,7 +550,7 @@ SWITCH
 186
 roadMap
 roadMap
-1
+0
 1
 -1000
 
@@ -968,6 +968,7 @@ NetLogo 6.0.3
     <go>go</go>
     <timeLimit steps="240"/>
     <metric>mean [demand] of gasstations with [brand = 1]</metric>
+    <metric>mean [demand] of gasstations with [brand = 0]</metric>
     <enumeratedValueSet variable="number-of-cars">
       <value value="50"/>
     </enumeratedValueSet>
